@@ -1,0 +1,120 @@
+/* src/css/RegisterPage.css */
+
+.register-page-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* Usamos el mismo degradado del Login */
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0b5079 0%, #133786 100%); 
+    padding: 4rem 0; /* Añade padding vertical para evitar que el contenido se pegue al borde en pantallas pequeñas */
+}
+
+.register-form-card {
+    background-color: white;
+    padding: 3rem 4rem; /* 30px arriba/abajo, 40px lados */
+    border-radius: 1.5rem; 
+    box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.2);
+    width: 45rem; /* Hacemos el formulario un poco más ancho para tantos campos (450px) */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.register-logo-container {
+    margin-bottom: 1.5rem;
+}
+
+.register-logo {
+    color: var(--success-color); /* Usamos el color de éxito para el logo de registro */
+    font-size: 5rem; 
+}
+
+.form-title {
+    font-family: var(--font-title);
+    font-size: 2.4rem;
+    color: var(--text-dark);
+    margin-top: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.form-subtitle {
+    font-family: var(--font-body);
+    font-size: 1.4rem;
+    color: var(--secondary-color);
+    margin-bottom: 2.5rem;
+}
+
+/* Campos de entrada genéricos (igual que en Login) */
+.input-group {
+    width: 100%;
+    margin-bottom: 2rem;
+    text-align: left;
+}
+
+.form-field-label {
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    font-size: 1.4rem;
+    color: var(--text-dark);
+    margin-bottom: 0.8rem;
+    text-transform: uppercase;
+}
+
+.input-field, .select-field {
+    width: 100%;
+    padding: 1.2rem 1.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.8rem;
+    font-size: 1.6rem;
+    transition: border-color 0.2s;
+}
+
+.input-field:focus, .select-field:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.3rem rgba(0, 123, 255, 0.25);
+    outline: none;
+}
+
+/* Botones */
+.button-group {
+    display: flex;
+    width: 100%;
+    margin-top: 2.5rem;
+}
+
+.btn-register-action {
+    background-color: var(--success-color);
+    color: white;
+    flex-grow: 1;
+    margin-right: 1rem;
+}
+
+.btn-back-login {
+    background-color: var(--secondary-color);
+    color: white;
+    flex-grow: 1;
+}
+
+.message-box {
+    padding: 1rem;
+    border-radius: 0.8rem;
+    margin-bottom: 2rem;
+    width: 100%;
+    font-size: 1.4rem;
+    text-align: center;
+}
+
+.error-message {
+    color: var(--danger-color);
+    background-color: #ffe6e6;
+    border: 1px solid var(--danger-color);
+}
+
+.success-message {
+    color: var(--success-color);
+    background-color: #e6ffe6;
+    border: 1px solid var(--success-color);
+}

@@ -2,11 +2,11 @@
 
 .login-page-container {
     display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    background: linear-gradient(135deg, #4a00e0 0%, #8e2de2 100%); /* Fondo degradado como en tu imagen */
-    /* Asegúrate de que el body/html no tenga un background-color que lo cubra */
+    justify-content: center; /* Esto centrará horizontalmente */
+    align-items: center;     /* Esto centrará verticalmente */
+    width: 100%; /* Asegura que ocupe todo el ancho */
+    min-height: 100vh; /* Asegura que ocupe toda la altura */
+    background: linear-gradient(135deg, #0b5079 0%, #133786 100%); 
 }
 
 .login-form-card {
