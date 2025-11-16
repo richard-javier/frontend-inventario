@@ -1,0 +1,141 @@
+/* src/controllers/LoginPage.css */
+
+.login-page-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #4a00e0 0%, #8e2de2 100%); /* Fondo degradado como en tu imagen */
+    /* Asegúrate de que el body/html no tenga un background-color que lo cubra */
+}
+
+.login-form-card {
+    background-color: white;
+    padding: 4rem; /* 40px */
+    border-radius: 1.5rem; /* Bordes más redondeados */
+    box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.2); /* Sombra más pronunciada */
+    width: 38rem; /* 380px */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center; /* Centrar textos */
+}
+
+.login-logo-container {
+    margin-bottom: 2rem;
+}
+
+.login-logo {
+    color: var(--primary-color); /* Usamos el azul primario para el logo */
+    font-size: 6rem; /* Icono más grande */
+}
+
+.system-title {
+    font-family: var(--font-title);
+    font-size: 2.8rem; /* Tamaño de título */
+    color: var(--text-dark);
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.system-subtitle {
+    font-family: var(--font-body);
+    font-size: 1.4rem;
+    color: var(--secondary-color);
+    margin-bottom: 3rem; /* Espacio debajo del subtítulo */
+}
+
+.form-field-label {
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    font-size: 1.4rem;
+    color: var(--text-dark); /* Color más oscuro para los labels */
+    margin-bottom: 0.8rem;
+    text-transform: uppercase; /* MAYÚSCULAS para labels */
+    letter-spacing: 0.05rem; /* Pequeño espaciado entre letras */
+    width: 100%; /* Asegura que el label ocupe todo el ancho */
+    justify-content: flex-start; /* Alinea el texto a la izquierda */
+}
+
+.input-icon {
+    margin-right: 0.8rem;
+    color: var(--secondary-color);
+}
+
+.login-input {
+    width: 100%;
+    padding: 1.2rem 1.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.8rem; /* Bordes más redondeados para inputs */
+    font-size: 1.6rem;
+    margin-bottom: 2.5rem; /* Más espacio entre inputs */
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.login-input::placeholder {
+    color: #a0a0a0;
+}
+
+.login-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.3rem rgba(0, 123, 255, 0.25); /* Sombra de focus */
+    outline: none;
+}
+
+.login-button {
+    width: 100%;
+    padding: 1.4rem 2rem;
+    margin-bottom: 1.5rem; /* Espacio entre botones */
+    border: none;
+    border-radius: 0.8rem; /* Bordes redondeados */
+    font-size: 1.6rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-transform: uppercase;
+    letter-spacing: 0.05rem;
+}
+
+.login-button-icon {
+    margin-right: 1rem;
+}
+
+/* Clases específicas para los botones del login */
+.btn-login-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-login-primary:hover {
+    background-color: #0056b3; /* Tono más oscuro de primary */
+    box-shadow: 0 0.5rem 1rem rgba(0, 123, 255, 0.3);
+}
+
+.btn-login-secondary {
+    background-color: var(--background-light); /* Fondo claro para el botón secundario */
+    color: var(--primary-color); /* Texto en color primario */
+    border: 1px solid var(--primary-color); /* Borde primario */
+}
+
+.btn-login-secondary:hover {
+    background-color: var(--primary-color);
+    color: white;
+    box-shadow: 0 0.5rem 1rem rgba(0, 123, 255, 0.3);
+}
+
+.error-message {
+    color: var(--danger-color);
+    background-color: #ffe6e6; /* Fondo más suave para errores */
+    padding: 1.2rem;
+    border-radius: 0.8rem;
+    margin-bottom: 2.5rem;
+    border: 1px solid var(--danger-color);
+    font-size: 1.4rem;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 0.5rem 1rem rgba(220, 53, 69, 0.1); /* Sombra de error */
+}

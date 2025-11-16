@@ -1,0 +1,105 @@
+/* src/global.css */
+/* Importar fuentes de Google Fonts (Opcional, pero recomendado) */
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&family=Poppins:wght@600;700&family=Roboto:wght@500&display=swap');
+
+/* =======================================
+   1. VARIABLES Y RESET BÁSICO (THEME)
+   ======================================= */
+:root {
+    /* Paleta de Colores */
+    --primary-color: #007bff;     /* Azul Corporativo */
+    --secondary-color: #6c757d;   /* Gris Oscuro */
+    --success-color: #28a745;     /* Verde de Éxito */
+    --danger-color: #dc3545;      /* Rojo de Advertencia */
+    --background-light: #f8f9fa;  /* Fondo Claro */
+    --text-dark: #212529;         /* Texto Oscuro */
+    --border-color: #ced4da;      /* Borde Estándar */
+    
+    /* Tipografía */
+    --font-title: 'Poppins', sans-serif;
+    --font-subtitle: 'Roboto', sans-serif;
+    --font-body: 'Open Sans', sans-serif;
+
+    /* Base REM: Permite que 1rem = 10px para facilitar el cálculo (1.6rem = 16px) */
+    font-size: 62.5%; /* 10px / 16px = 0.625 */
+}
+
+
+/* Reset de Box Sizing y Margen base */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Aplicación de fuentes y tamaño base */
+body, #root {
+    font-family: var(--font-body);
+    font-size: 1.6rem; /* Esto es 16px */
+    color: var(--text-dark);
+    background-color: var(--background-light);
+    min-height: 100vh;
+}
+
+/* =======================================
+   2. REGLAS TIPOGRÁFICAS
+   ======================================= */
+
+/* Títulos principales (usar en h1) */
+h1 {
+    font-family: var(--font-title);
+    font-size: 3.2rem; /* 32px */
+    color: var(--primary-color);
+    margin-bottom: 2rem;
+}
+
+/* Subtítulos de sección (usar en h2, h3) */
+h2 {
+    font-family: var(--font-subtitle);
+    font-size: 2.4rem; /* 24px */
+    color: var(--text-dark);
+    margin-bottom: 1.5rem;
+}
+
+/* Párrafos y texto general */
+p {
+    font-family: var(--font-body);
+    font-size: 1.6rem; /* 16px */
+    line-height: 1.6;
+}
+
+/* =======================================
+   3. CLASES DE UTILIDAD
+   ======================================= */
+
+/* Botones principales */
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3; /* Tono más oscuro de azul */
+}
+
+/* Botón de éxito/registro */
+.btn-success {
+    background-color: var(--success-color);
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
+
+.btn-success:hover {
+    background-color: #1e7e34;
+}
