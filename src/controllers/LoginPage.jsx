@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaBox, FaEnvelope, FaLock, FaSignInAlt, FaUserPlus } from 'react-icons/fa'; // Añadimos FaBox para el logo
-import '../css/LoginPage.css'; // Importamos estilos específicos de la página
+import { FaBox, FaEnvelope, FaLock, FaSignInAlt, FaUserPlus } from 'react-icons/fa'; 
+import '../css/LoginPage.css'; 
 
 const API_URL = 'http://localhost:3001/api/auth'; 
 
@@ -39,12 +39,21 @@ const LoginPage = () => {
                 throw new Error(data.message || 'Credenciales inválidas o error de servidor.');
             }
 
-            localStorage.setItem('authToken', data.token);
-            localStorage.setItem('usuarioRol', data.usuario.rol); 
+            // --- INICIO DE LA CORRECCIÓN ---
+            // 1. Guardamos el token con el nombre exacto 'token'
+            localStorage.setItem('token', data.token);
+            
+            // 2. Guardamos TODO el objeto usuario (nombre, rol, id) convertido a texto.
+            // Esto es vital para que el Dashboard sepa tu nombre y qué botones mostrarte.
+            localStorage.setItem('usuario', JSON.stringify(data.usuario)); 
+            // --- FIN DE LA CORRECCIÓN ---
+
+            console.log("Login exitoso, datos guardados:", data.usuario); // Para depuración
 
             navigate('/dashboard'); 
 
         } catch (err) {
+            console.error(err);
             setError(err.message);
         }
     };
@@ -58,7 +67,7 @@ const LoginPage = () => {
             <form onSubmit={handleLogin} className="login-form-card">
                 {/* Logo y Título del Sistema */}
                 <div className="login-logo-container">
-                    <FaBox className="login-logo" /> {/* Icono de caja para el sistema de inventario */}
+                    <FaBox className="login-logo" /> 
                     <h1 className="system-title">Sistema de Inventario</h1>
                     <p className="system-subtitle">Control y Trazabilidad Integral</p>
                 </div>
