@@ -1,189 +1,209 @@
-import React, { useState } from 'react';
-import { FaBarcode, FaTruck, FaUser, FaClipboardCheck, FaSave, FaBox } from 'react-icons/fa';
+import React, { useState, useEffect } from 'react';
+import { FaTruck, FaFileAlt, FaWarehouse, FaCar, FaShieldAlt, FaBox, FaCheckCircle, FaSpinner, FaSearch, FaTag, FaTimesCircle, FaMapMarkerAlt, FaPallet } from 'react-icons/fa';
 
 const EntryPage = () => {
-  // Estado para búsqueda
-  const [codigoBusqueda, setCodigoBusqueda] = useState('');
-  const [productoEncontrado, setProductoEncontrado] = useState(null);
+  const [bodegas, setBodegas] = useState([]);
+  const [aforos, setAforos] = useState([]);
+  const [ubicacionesLibres, setUbicacionesLibres] = useState([]);
+  const [lotesPendientes, setLotesPendientes] = useState([]);
+  const [loadingInitial, setLoadingInitial] = useState(true);
   
-  // Estado para el formulario de ingreso
-  const [datosIngreso, setDatosIngreso] = useState({
-    cantidad: '',
-    placa_vehiculo: '',
-    nombre_chofer: '',
-    observaciones: ''
+  // 1. MEJORA: Bodega por defecto es B00 (Materia prima)
+  const [cabecera, setCabecera] = useState({ 
+      proveedor: '', nro_documento: '', dui: '', id_bodega: 'B00', 
+      placa_vehiculo: '', id_aforo: '03', guardias_armados: 0, observaciones: '' 
   });
 
-  // 1. FUNCIÓN BUSCAR PRODUCTO (Al dar Enter en el escáner)
-  const buscarProducto = async (e) => {
-    e.preventDefault();
-    if (!codigoBusqueda) return;
+  const [loteEscaneado, setLoteEscaneado] = useState('');
+  const [loteSeleccionado, setLoteSeleccionado] = useState(null); 
+  const [costoUnitarioInput, setCostoUnitarioInput] = useState('');
 
+  const [selCorredor, setSelCorredor] = useState('');
+  const [selPosicion, setSelPosicion] = useState('');
+  const [selNivel, setSelNivel] = useState('');
+
+  const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
+
+  const cargarDatosSincot = async () => {
     const token = localStorage.getItem('token');
     try {
-      // Reusamos la API de obtener todos y filtramos (o podrías crear una API de búsqueda específica)
-      const response = await fetch('http://localhost:3001/api/inventario', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
+      const [resMaestros, resLotes] = await Promise.all([
+          fetch('http://localhost:3001/api/inventario/maestros', { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch('http://localhost:3001/api/inventario/lotes/pendientes', { headers: { 'Authorization': `Bearer ${token}` } })
+      ]);
       
-      // Buscamos exacto por código
-      const encontrado = data.find(p => p.codigo_barras === codigoBusqueda.trim());
-      
-      if (encontrado) {
-        setProductoEncontrado(encontrado);
-        setDatosIngreso({ ...datosIngreso, cantidad: '' }); // Limpiar cantidad previa
-      } else {
-        alert("❌ Producto no encontrado. Verifique el código o créelo primero.");
-        setProductoEncontrado(null);
+      if (resMaestros.ok) {
+          const dataMaestros = await resMaestros.json();
+          if (dataMaestros.bodegas) setBodegas(dataMaestros.bodegas);
+          if (dataMaestros.aforos) setAforos(dataMaestros.aforos);
+          if (dataMaestros.ubicaciones) setUbicacionesLibres(dataMaestros.ubicaciones);
       }
-    } catch (error) {
-      console.error(error);
-      alert("Error de conexión");
-    }
+      if (resLotes.ok) {
+          const dataLotes = await resLotes.json();
+          setLotesPendientes(Array.isArray(dataLotes) ? dataLotes : []);
+      }
+    } catch (error) { console.error("Error SINCOT:", error); }
+    finally { setLoadingInitial(false); }
   };
 
-  // 2. FUNCIÓN GUARDAR INGRESO
-  const handleGuardarIngreso = async (e) => {
+  useEffect(() => { cargarDatosSincot(); }, []);
+
+  const corredores = [...new Set(ubicacionesLibres.map(u => u.corredor))].sort();
+  const posiciones = [...new Set(ubicacionesLibres.filter(u => u.corredor === selCorredor).map(u => u.posicion))].sort();
+  const niveles = ubicacionesLibres.filter(u => u.corredor === selCorredor && u.posicion === selPosicion).map(u => u.nivel).sort();
+
+  const handleBuscarLoteSincot = (e) => {
     e.preventDefault();
-    if(!productoEncontrado) return;
+    const codigoLimpio = loteEscaneado.toUpperCase().trim();
+    const lote = lotesPendientes.find(l => codigoLimpio.startsWith(l.lote_pallet) || codigoLimpio.startsWith(l.lote_base));
+    
+    if (lote) {
+        const ingresados = lote.pallets_ingresados || 0;
+        const unidadesBase = lote.unidades_por_pallet;
+        let cantidadReal = unidadesBase;
+
+        if (ingresados === lote.total_pallets - 1) {
+            const saldo = lote.cantidad_total - (ingresados * unidadesBase);
+            if (saldo > 0) cantidadReal = saldo;
+        }
+
+        setLoteSeleccionado({ ...lote, cantidad_ingresar: cantidadReal, pallet_actual: ingresados + 1 }); 
+        setSelCorredor(''); setSelPosicion(''); setSelNivel('');
+    } else { alert("❌ Lote o Pallet no encontrado en planificaciones pendientes."); }
+  };
+
+  const handleGuardarIngresoFormalSincot = async () => {
+    if (!loteSeleccionado || !costoUnitarioInput) return alert("Ingrese el Costo Unitario.");
+    if (!selCorredor || !selPosicion || !selNivel) return alert("Debe asignar una ubicación completa en la percha.");
+    if (!cabecera.proveedor || !cabecera.nro_documento || !cabecera.dui) return alert("Complete los datos logísticos.");
 
     const token = localStorage.getItem('token');
-    try {
-      const response = await fetch('http://localhost:3001/api/inventario/ingreso', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          id_producto: productoEncontrado.id_producto,
-          ...datosIngreso
-        })
-      });
+    const idUbicacionFinal = `${selCorredor}${selPosicion}${selNivel}`;
 
+    const itemRecibido = {
+        id_lote_planificado: loteSeleccionado.id_lote,
+        id_producto: loteSeleccionado.id_producto,
+        cantidad_ingresar: loteSeleccionado.cantidad_ingresar,
+        costo_unitario: parseFloat(costoUnitarioInput || 0), 
+        id_ubicacion: idUbicacionFinal
+    };
+
+    try {
+      const response = await fetch('http://localhost:3001/api/inventario/ingresos/formal', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ cabecera, itemRecibido })
+      });
       if (response.ok) {
-        alert(`✅ Ingreso Exitoso.\nEl nuevo stock de "${productoEncontrado.nombre_producto}" ha aumentado.`);
-        // Limpiar todo para el siguiente producto
-        setProductoEncontrado(null);
-        setCodigoBusqueda('');
-        setDatosIngreso({ cantidad: '', placa_vehiculo: '', nombre_chofer: '', observaciones: '' });
-      } else {
-        const data = await response.json();
-        alert("Error: " + data.message);
+        setMensaje({ texto: `✅ Pallet ingresado en Percha ${idUbicacionFinal}. Listo para el siguiente escaneo.`, tipo: 'exito' });
+        
+        // 2. MEJORA DE UX: No borramos cabecera ni costo. 
+        // Solo limpiamos los datos del pallet actual para agilizar el flujo.
+        setLoteSeleccionado(null); 
+        setLoteEscaneado('');
+        setSelCorredor(''); setSelPosicion(''); setSelNivel('');
+        
+        await cargarDatosSincot(); 
+        setTimeout(() => setMensaje({ texto: '', tipo: '' }), 4000);
       }
-    } catch (error) {
-      alert("Error al procesar ingreso");
-    }
+    } catch (error) { setMensaje({ texto: "❌ Error de red.", tipo: 'error' }); }
   };
+
+  const inputStyle = { width: '100%', padding: '12px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '1rem', marginTop: '5px' };
+  const labelStyle = { display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold', fontSize: '0.85rem', color: '#444', textTransform: 'uppercase' };
+  const readOnlyStyle = { ...inputStyle, background: '#f8f9fa', color: '#666', fontWeight: 'bold', border: '1px solid #ddd' };
+
+  if (loadingInitial) return <div style={{textAlign:'center', padding:'50px'}}><FaSpinner className="fa-spin" size="2em" color="#1a73e8" /><p>Cargando WMS...</p></div>;
 
   return (
-    <div style={{ padding: '20px', background: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-      
-      <div style={{ borderBottom: '2px solid #f0f2f5', paddingBottom: '15px', marginBottom: '20px' }}>
-        <h2 style={{ color: '#1a73e8', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <FaTruck /> Registro de Ingreso de Mercadería
-        </h2>
-        <p style={{ color: '#666', fontSize: '0.9rem' }}>Recepción de proveedores y actualización de stock (Trazabilidad de Entrada).</p>
-      </div>
+    <div style={{ padding: '25px', background: 'white', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
+      <h2 style={{ color: '#1a73e8', borderBottom: '2px solid #f0f2f5', paddingBottom: '15px', marginBottom: '25px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <FaTruck /> Recepción por Pallet y Asignación de Percha.
+      </h2>
 
-      {/* --- PASO 1: ESCANEO --- */}
-      <div style={{ background: '#e8f0fe', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
-        <form onSubmit={buscarProducto} style={{ display: 'flex', gap: '10px' }}>
-          <div style={{ position: 'relative', flex: 1 }}>
-            <FaBarcode style={{ position: 'absolute', left: '15px', top: '15px', color: '#1a73e8' }} />
-            <input 
-              type="text" 
-              placeholder="Escanee el Código de Barras del producto..." 
-              value={codigoBusqueda}
-              onChange={(e) => setCodigoBusqueda(e.target.value)}
-              style={{ width: '100%', padding: '12px 12px 12px 45px', borderRadius: '6px', border: '2px solid #1a73e8', fontSize: '1.1rem', outline: 'none' }}
-              autoFocus 
-            />
-          </div>
-          <button type="submit" style={{ background: '#1a73e8', color: 'white', border: 'none', padding: '0 25px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
-            BUSCAR
-          </button>
-        </form>
-      </div>
+      {mensaje.texto && <div style={{ padding: '15px', marginBottom: '20px', borderRadius: '6px', fontWeight: 'bold', background: '#e6f4ea', color: '#137333', border: `1px solid #137333` }}>{mensaje.texto}</div>}
 
-      {/* --- PASO 2: FORMULARIO DE INGRESO (Solo si se encontró producto) --- */}
-      {productoEncontrado && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '30px', animation: 'fadeIn 0.5s' }}>
-          
-          {/* Tarjeta del Producto (Resumen) */}
-          <div style={{ background: '#f8f9fa', padding: '20px', borderRadius: '8px', border: '1px solid #ddd', height: 'fit-content' }}>
-            <h3 style={{ marginTop: 0, color: '#333' }}><FaBox /> Producto Detectado</h3>
-            <div style={{ margin: '15px 0' }}>
-              <label style={{ display: 'block', color: '#666', fontSize: '0.85rem' }}>Nombre:</label>
-              <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{productoEncontrado.nombre_producto}</div>
+      <div style={{ background: '#f8f9fa', padding: '25px', borderRadius: '8px', marginBottom: '30px', border: '1px solid #ddd' }}>
+        <h4 style={{ marginTop: 0, color: '#333', marginBottom: '20px', fontSize: '1.1rem' }}>Datos Logísticos del Arribo</h4>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
+            <div><label style={labelStyle}><FaWarehouse/> Bodega Destino *</label>
+              <select value={cabecera.id_bodega} onChange={e => setCabecera({...cabecera, id_bodega: e.target.value})} style={{...inputStyle, border: '2px solid #1a73e8', fontWeight: 'bold'}}>
+                  {bodegas.map(b => <option key={b.id} value={b.id}>{b.id} - {b.descripcion}</option>)}
+              </select>
             </div>
-            <div style={{ margin: '15px 0' }}>
-              <label style={{ display: 'block', color: '#666', fontSize: '0.85rem' }}>Detalles:</label>
-              <div>{productoEncontrado.marca} - {productoEncontrado.modelo}</div>
+            <div><label style={labelStyle}>Aforo / Inspección</label>
+              <select value={cabecera.id_aforo} onChange={e => setCabecera({...cabecera, id_aforo: e.target.value})} style={inputStyle}>
+                  {aforos.map(a => <option key={a.id} value={a.id}>{a.descripcion}</option>)}
+              </select>
             </div>
-            <div style={{ margin: '15px 0', background: 'white', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}>
-              <label style={{ display: 'block', color: '#666', fontSize: '0.85rem' }}>Stock Actual (Sistema):</label>
-              <div style={{ fontWeight: 'bold', fontSize: '1.5rem', color: '#1a73e8' }}>{productoEncontrado.stock_actual} Unid.</div>
-            </div>
-          </div>
-
-          {/* Formulario de Entrada */}
-          <form onSubmit={handleGuardarIngreso}>
-            <h3 style={{ marginTop: 0, color: '#333' }}>Datos de la Recepción</h3>
+            <div><label style={labelStyle}><FaTag/> Proveedor / Origen *</label><input type="text" value={cabecera.proveedor} onChange={e => setCabecera({...cabecera, proveedor: e.target.value})} style={inputStyle} /></div>
+            <div><label style={labelStyle}><FaFileAlt/> Factura / Guía *</label><input type="text" value={cabecera.nro_documento} onChange={e => setCabecera({...cabecera, nro_documento: e.target.value})} style={inputStyle} /></div>
             
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Cantidad a Ingresar *</label>
-              <input 
-                type="number" min="1" required 
-                value={datosIngreso.cantidad}
-                onChange={(e) => setDatosIngreso({...datosIngreso, cantidad: e.target.value})}
-                style={{ width: '100%', padding: '12px', fontSize: '1.2rem', borderRadius: '5px', border: '2px solid #28a745' }}
-                placeholder="0"
-              />
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '5px', color: '#555' }}><FaTruck /> Placa Vehículo (Opcional)</label>
-                <input 
-                  type="text" 
-                  value={datosIngreso.placa_vehiculo}
-                  onChange={(e) => setDatosIngreso({...datosIngreso, placa_vehiculo: e.target.value})}
-                  style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
-                  placeholder="Ej: GBA-1234"
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: '5px', color: '#555' }}><FaUser /> Nombre Chofer/Entrega</label>
-                <input 
-                  type="text" 
-                  value={datosIngreso.nombre_chofer}
-                  onChange={(e) => setDatosIngreso({...datosIngreso, nombre_chofer: e.target.value})}
-                  style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
-                  placeholder="Ej: Juan Pérez"
-                />
-              </div>
-            </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '5px', color: '#555' }}><FaClipboardCheck /> Observaciones</label>
-              <textarea 
-                rows="3"
-                value={datosIngreso.observaciones}
-                onChange={(e) => setDatosIngreso({...datosIngreso, observaciones: e.target.value})}
-                style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
-                placeholder="Ej: Compra según factura #001..."
-              />
-            </div>
-
-            <button type="submit" style={{ width: '100%', padding: '15px', background: '#28a745', color: 'white', border: 'none', borderRadius: '6px', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
-              <FaSave /> CONFIRMAR INGRESO AL STOCK
-            </button>
-          </form>
-
+            <div><label style={labelStyle}>DUI (Aduana) *</label><input type="text" value={cabecera.dui} onChange={e => setCabecera({...cabecera, dui: e.target.value})} style={inputStyle} /></div>
+            <div><label style={labelStyle}><FaCar/> Placa Vehículo</label><input type="text" value={cabecera.placa_vehiculo} onChange={e => setCabecera({...cabecera, placa_vehiculo: e.target.value})} style={inputStyle} /></div>
+            <div><label style={labelStyle}><FaShieldAlt/> Guardias (Custodia)</label><input type="number" min="0" value={cabecera.guardias_armados} onChange={e => setCabecera({...cabecera, guardias_armados: e.target.value})} style={inputStyle} /></div>
         </div>
-      )}
+      </div>
+
+      <div style={{ background: '#e8f0fe', padding: '25px', borderRadius: '8px', marginBottom: '30px', border: '1px solid #1a73e8' }}>
+        <form onSubmit={handleBuscarLoteSincot} style={{ display: 'flex', gap: '15px' }}>
+            <div style={{ position: 'relative', flex: 1 }}>
+                <FaSearch style={{ position: 'absolute', left: '15px', top: '15px', color: '#1a73e8' }} />
+                <input type="text" value={loteEscaneado} onChange={e => setLoteEscaneado(e.target.value)} style={{...inputStyle, paddingLeft: '45px', fontSize: '1.2rem', marginTop: 0}} placeholder="Escanee ETIQUETA DE PALLET (Ej: DAHAABP0000001)..." />
+            </div>
+            <button type="submit" style={{background:'#1a73e8', color:'white', border:'none', padding:'0 30px', borderRadius:'6px', fontWeight:'bold', cursor:'pointer'}}><FaBox /> ESCANEAR LPN</button>
+        </form>
+
+        {loteSeleccionado && (
+            <div style={{ marginTop: '25px', background: 'white', padding: '25px', borderRadius: '8px', border: '2px solid #34a853', position: 'relative' }}>
+                <h3 style={{ margin: '0 0 20px 0', color: '#333' }}>
+                    Asignación de Pallet en Rack de Almacenamiento 
+                    <span style={{fontSize:'0.9rem', color:'#1a73e8', marginLeft:'10px'}}>(Pallet {loteSeleccionado.pallet_actual} de {loteSeleccionado.total_pallets})</span>
+                </h3>
+                <button onClick={() => setLoteSeleccionado(null)} style={{ position: 'absolute', top: '20px', right: '20px', color: '#d93025', border: 'none', background: 'none', cursor:'pointer' }}><FaTimesCircle size="1.5em" /></button>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px', alignItems: 'flex-end', marginBottom: '25px' }}>
+                    <div style={{gridColumn: 'span 2'}}><label style={labelStyle}>Producto a Ingresar </label><input type="text" value={`${loteSeleccionado.nombre_producto} | ${loteSeleccionado.marca}`} style={readOnlyStyle} readOnly /></div>
+                    <div>
+                        <label style={{...labelStyle, color: '#fbbc04'}}><FaPallet/> Cantidad (Unid. x Pallet)</label>
+                        <input type="text" value={`${loteSeleccionado.cantidad_ingresar} Unidades`} style={{...readOnlyStyle, color: '#fbbc04', border: '2px solid #fbbc04'}} readOnly />
+                    </div>
+                    <div><label style={labelStyle}>Costo Unitario ($) *</label><input type="number" step="0.01" value={costoUnitarioInput} onChange={e => setCostoUnitarioInput(e.target.value)} style={{...inputStyle, border:'2px solid #34a853', fontWeight:'bold'}} /></div>
+                </div>
+
+                <div style={{ background: '#f1f3f4', padding: '20px', borderRadius: '8px', border: '1px dashed #aaa' }}>
+                    <h4 style={{ margin: '0 0 15px 0', display: 'flex', alignItems: 'center', gap: '10px' }}><FaMapMarkerAlt color="#d93025"/> Coordenadas de las ubicaciones</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr) auto', gap: '15px', alignItems: 'end' }}>
+                        
+                        <div>
+                            <label style={labelStyle}>1. Corredor</label>
+                            <select value={selCorredor} onChange={e => {setSelCorredor(e.target.value); setSelPosicion(''); setSelNivel('');}} style={{...inputStyle, border:'2px solid #1a73e8'}}>
+                                <option value="">Seleccione...</option>
+                                {corredores.map(c => <option key={c} value={c}>Corredor {c}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label style={labelStyle}>2. Posición</label>
+                            <select value={selPosicion} onChange={e => {setSelPosicion(e.target.value); setSelNivel('');}} disabled={!selCorredor} style={{...inputStyle, border:'2px solid #1a73e8'}}>
+                                <option value="">Seleccione...</option>
+                                {posiciones.map(p => <option key={p} value={p}>Posición {p}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label style={labelStyle}>3. Nivel (Estante)</label>
+                            <select value={selNivel} onChange={e => setSelNivel(e.target.value)} disabled={!selPosicion} style={{...inputStyle, border:'2px solid #1a73e8'}}>
+                                <option value="">Seleccione...</option>
+                                {niveles.map(n => <option key={n} value={n}>Nivel {n}</option>)}
+                            </select>
+                        </div>
+
+                        <button onClick={handleGuardarIngresoFormalSincot} disabled={!selNivel} style={{background: selNivel ? '#34a853' : '#ccc', color: 'white', border: 'none', padding: '14px 25px', borderRadius: '6px', fontWeight:'bold', cursor: selNivel ? 'pointer' : 'not-allowed', display:'flex', alignItems:'center', gap:'10px'}}>
+                            <FaCheckCircle /> INGRESAR PALLET
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+      </div>
     </div>
   );
 };
