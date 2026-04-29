@@ -1,141 +1,248 @@
-/* src/controllers/LoginPage.css */
+/* src/css/LoginPage.css */
 
-.login-page-container {
+.login-wrapper {
     display: flex;
-    justify-content: center; /* Esto centrará horizontalmente */
-    align-items: center;     /* Esto centrará verticalmente */
-    width: 100%; /* Asegura que ocupe todo el ancho */
-    min-height: 100vh; /* Asegura que ocupe toda la altura */
-    background: linear-gradient(135deg, #0b5079 0%, #133786 100%); 
+    width: 100vw;
+    height: 100vh;
+    font-family: system-ui, -apple-system, sans-serif;
+    overflow: hidden; /* Evita scrollbars innecesarias */
 }
 
-.login-form-card {
-    background-color: white;
-    padding: 4rem; /* 40px */
-    border-radius: 1.5rem; /* Bordes más redondeados */
-    box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.2); /* Sombra más pronunciada */
-    width: 38rem; /* 380px */
+/* ================= PANEL IZQUIERDO (BRANDING) ================= */
+.login-branding-panel {
+    flex: 1; /* Ocupa la mitad de la pantalla */
+    background: linear-gradient(135deg, #0b3d59 0%, #1a73e8 100%);
+    color: white;
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center; /* Centrar textos */
-}
-
-.login-logo-container {
-    margin-bottom: 2rem;
-}
-
-.login-logo {
-    color: var(--primary-color); /* Usamos el azul primario para el logo */
-    font-size: 6rem; /* Icono más grande */
-}
-
-.system-title {
-    font-family: var(--font-title);
-    font-size: 2.8rem; /* Tamaño de título */
-    color: var(--text-dark);
-    margin-top: 1rem;
-    margin-bottom: 0.5rem;
-}
-
-.system-subtitle {
-    font-family: var(--font-body);
-    font-size: 1.4rem;
-    color: var(--secondary-color);
-    margin-bottom: 3rem; /* Espacio debajo del subtítulo */
-}
-
-.form-field-label {
-    display: flex;
-    align-items: center;
-    font-weight: 600;
-    font-size: 1.4rem;
-    color: var(--text-dark); /* Color más oscuro para los labels */
-    margin-bottom: 0.8rem;
-    text-transform: uppercase; /* MAYÚSCULAS para labels */
-    letter-spacing: 0.05rem; /* Pequeño espaciado entre letras */
-    width: 100%; /* Asegura que el label ocupe todo el ancho */
-    justify-content: flex-start; /* Alinea el texto a la izquierda */
-}
-
-.input-icon {
-    margin-right: 0.8rem;
-    color: var(--secondary-color);
-}
-
-.login-input {
-    width: 100%;
-    padding: 1.2rem 1.5rem;
-    border: 1px solid var(--border-color);
-    border-radius: 0.8rem; /* Bordes más redondeados para inputs */
-    font-size: 1.6rem;
-    margin-bottom: 2.5rem; /* Más espacio entre inputs */
-    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-}
-
-.login-input::placeholder {
-    color: #a0a0a0;
-}
-
-.login-input:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 0.3rem rgba(0, 123, 255, 0.25); /* Sombra de focus */
-    outline: none;
-}
-
-.login-button {
-    width: 100%;
-    padding: 1.4rem 2rem;
-    margin-bottom: 1.5rem; /* Espacio entre botones */
-    border: none;
-    border-radius: 0.8rem; /* Bordes redondeados */
-    font-size: 1.6rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-    display: flex;
-    align-items: center;
     justify-content: center;
-    text-transform: uppercase;
-    letter-spacing: 0.05rem;
+    align-items: center;
+    padding: 3rem;
 }
 
-.login-button-icon {
-    margin-right: 1rem;
+.branding-content {
+    max-width: 500px;
 }
 
-/* Clases específicas para los botones del login */
-.btn-login-primary {
-    background-color: var(--primary-color);
-    color: white;
+.branding-icon {
+    font-size: 5rem;
+    margin-bottom: 1.5rem;
+    color: #fff;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
 }
 
-.btn-login-primary:hover {
-    background-color: #0056b3; /* Tono más oscuro de primary */
-    box-shadow: 0 0.5rem 1rem rgba(0, 123, 255, 0.3);
+.branding-title {
+    font-size: 3.5rem;
+    font-weight: 900;
+    margin: 0;
+    letter-spacing: 2px;
 }
 
-.btn-login-secondary {
-    background-color: var(--background-light); /* Fondo claro para el botón secundario */
-    color: var(--primary-color); /* Texto en color primario */
-    border: 1px solid var(--primary-color); /* Borde primario */
+.branding-subtitle {
+    font-size: 1.2rem;
+    font-weight: 400;
+    margin: 10px 0 30px 0;
+    color: #e8f0fe;
 }
 
-.btn-login-secondary:hover {
-    background-color: var(--primary-color);
-    color: white;
-    box-shadow: 0 0.5rem 1rem rgba(0, 123, 255, 0.3);
+.branding-description {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #e8eaed;
+    margin-bottom: 40px;
 }
 
-.error-message {
-    color: var(--danger-color);
-    background-color: #ffe6e6; /* Fondo más suave para errores */
-    padding: 1.2rem;
-    border-radius: 0.8rem;
-    margin-bottom: 2.5rem;
-    border: 1px solid var(--danger-color);
-    font-size: 1.4rem;
+.feature-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    backdrop-filter: blur(5px);
+}
+
+/* ================= PANEL DERECHO (FORMULARIO) ================= */
+.login-form-panel {
+    flex: 1; /* Ocupa la otra mitad */
+    background-color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+}
+
+.form-container {
     width: 100%;
+    max-width: 420px; /* Ancho máximo para que no se estire feo */
+}
+
+.form-header {
+    margin-bottom: 2.5rem;
+}
+
+.form-header h2 {
+    color: #202124;
+    font-size: 2rem;
+    margin: 0 0 8px 0;
+}
+
+.form-header p {
+    color: #5f6368;
+    margin: 0;
+    font-size: 1rem;
+}
+
+/* Manejo de Errores */
+.error-alert {
+    background-color: #fce8e6;
+    color: #d93025;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border-left: 4px solid #d93025;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Inputs */
+.input-group {
+    margin-bottom: 20px;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #3c4043;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-wrapper .input-icon {
+    position: absolute;
+    left: 14px;
+    color: #9aa0a6;
+    font-size: 1.1rem;
+}
+
+.input-wrapper input {
+    width: 100%;
+    padding: 14px 14px 14px 40px;
+    border: 1px solid #dadce0;
+    border-radius: 8px;
+    font-size: 1rem;
+    color: #202124;
+    transition: all 0.2s;
+    background: #f8f9fa;
+}
+
+.input-wrapper input:focus {
+    outline: none;
+    border-color: #1a73e8;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+}
+
+.input-wrapper input::placeholder {
+    color: #bdc1c6;
+}
+
+/* Botones */
+.btn-login {
+    width: 100%;
+    padding: 16px;
+    background: #1a73e8;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.2s, transform 0.1s;
+    margin-top: 10px;
+}
+
+.btn-login:hover {
+    background: #1557b0;
+}
+
+.btn-login:active {
+    transform: scale(0.98);
+}
+
+.btn-login.loading {
+    background: #8ab4f8;
+    cursor: not-allowed;
+}
+
+.login-footer {
+    margin-top: 40px;
     text-align: center;
-    box-shadow: 0 0.5rem 1rem rgba(220, 53, 69, 0.1); /* Sombra de error */
+    border-top: 1px solid #f0f2f5;
+    padding-top: 20px;
+}
+
+.login-footer p {
+    color: #5f6368;
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+}
+
+.btn-register-link {
+    background: none;
+    border: none;
+    color: #1a73e8;
+    font-weight: bold;
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: color 0.2s;
+}
+
+.btn-register-link:hover {
+    color: #1557b0;
+    text-decoration: underline;
+}
+
+/* Diseño Responsive (Para celulares) */
+@media (max-width: 768px) {
+    .login-wrapper {
+        flex-direction: column;
+    }
+    
+    .login-branding-panel {
+        flex: 0.4;
+        padding: 2rem;
+        text-align: center;
+    }
+    
+    .branding-icon {
+        font-size: 3rem;
+    }
+    
+    .branding-title {
+        font-size: 2rem;
+    }
+    
+    .branding-description, .feature-item {
+        display: none; /* Ocultamos texto largo en móvil para ahorrar espacio */
+    }
+    
+    .login-form-panel {
+        flex: 0.6;
+        padding: 2rem 1.5rem;
+        align-items: flex-start;
+    }
 }
