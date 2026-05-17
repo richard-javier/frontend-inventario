@@ -1,0 +1,152 @@
+/* src/css/ScanPage.css */
+
+.scan-container {
+    padding: 25px;
+    background: #f8f9fa;
+    min-height: 100vh;
+    font-family: system-ui, sans-serif;
+}
+
+.scan-card-main {
+    background: white;
+    padding: 30px;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.scan-header-title {
+    color: #202124;
+    border-bottom: 2px solid #f0f2f5;
+    padding-bottom: 15px;
+    margin-bottom: 25px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 1.5rem;
+}
+
+.scan-box-disabled {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+}
+
+.scan-box-white {
+    background: white;
+    border: 2px solid #202124;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.scan-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: bold;
+    font-size: 0.8rem;
+    color: #5f6368;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.scan-input {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: 2px solid #dadce0;
+    font-size: 1.1rem; /* Un poco más grande para mejor lectura */
+    outline: none;
+    box-sizing: border-box;
+    font-weight: bold;
+    color: #202124;
+    background-color: #ffffff; /* Forzamos fondo blanco puro */
+    appearance: auto;
+}
+
+.scan-input:focus {
+    border-color: #1a73e8;
+}
+
+.scan-input:disabled {
+    background: #f8f9fa;
+    color: #5f6368;
+    cursor: not-allowed;
+}
+
+/* Blindaje UX: Opciones del desplegable siempre blancas */
+.scan-input option {
+    background-color: #ffffff;
+    color: #202124;
+    font-weight: normal;
+    padding: 10px;
+}
+
+.scan-input-yellow {
+    background: #fff9c4;
+    border: 2px solid #fbbc04;
+    text-align: center;
+    font-size: 1.5rem;
+    letter-spacing: 2px;
+    padding: 15px;
+}
+
+/* ZONA LECTORA */
+.scan-reader-zone {
+    background: #e8f0fe;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #8ab4f8;
+    margin-bottom: 25px;
+}
+
+.scan-reader-input {
+    width: 100%;
+    padding: 12px 12px 12px 45px;
+    border-radius: 8px;
+    background-color: #202124;
+    color: #ffffff;
+    border: 2px solid #1a73e8;
+    height: 50px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    box-sizing: border-box;
+}
+
+/* BOTONES TOGGLE */
+.btn-toggle-group {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.btn-toggle {
+    flex: 1;
+    padding: 15px;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.2s;
+}
+
+.btn-toggle.active {
+    background: #1a73e8;
+    color: white;
+    box-shadow: 0 4px 6px rgba(26,115,232,0.2);
+}
+
+.btn-toggle.inactive {
+    background: #f1f3f4;
+    color: #5f6368;
+}

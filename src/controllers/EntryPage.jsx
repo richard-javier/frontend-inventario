@@ -1,26 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { FaTruck, FaFileAlt, FaWarehouse, FaCar, FaShieldAlt, FaBox, FaCheckCircle, FaSpinner, FaSearch, FaTag, FaTimesCircle, FaMapMarkerAlt, FaPallet } from 'react-icons/fa';
+import { FaTruck, FaWarehouse, FaBox, FaCheckCircle, FaSpinner, FaSearch, FaTimesCircle, FaMapMarkerAlt, FaPallet, FaLayerGroup, FaBars } from 'react-icons/fa';
 
 const EntryPage = () => {
   const [bodegas, setBodegas] = useState([]);
-  const [aforos, setAforos] = useState([]);
   const [ubicacionesLibres, setUbicacionesLibres] = useState([]);
   const [lotesPendientes, setLotesPendientes] = useState([]);
   const [loadingInitial, setLoadingInitial] = useState(true);
   
-  // 1. MEJORA: Bodega por defecto es B00 (Materia prima)
-  const [cabecera, setCabecera] = useState({ 
-      proveedor: '', nro_documento: '', dui: '', id_bodega: 'B00', 
-      placa_vehiculo: '', id_aforo: '03', guardias_armados: 0, observaciones: '' 
-  });
-
+  const [cabecera, setCabecera] = useState({ id_bodega: 'B00' });
   const [loteEscaneado, setLoteEscaneado] = useState('');
   const [loteSeleccionado, setLoteSeleccionado] = useState(null); 
-  const [costoUnitarioInput, setCostoUnitarioInput] = useState('');
 
-  const [selCorredor, setSelCorredor] = useState('');
-  const [selPosicion, setSelPosicion] = useState('');
-  const [selNivel, setSelNivel] = useState('');
+  // --- ESTRATEGIA Y ASIGNACIÓN SIMPLIFICADA ---
+  // Mantenemos 'RACK' y 'PISO' internamente para que funcione con la Base de Datos
+  const [estrategia, setEstrategia] = useState('RACK'); 
+  const [selUbicacion, setSelUbicacion] = useState(''); 
 
   const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
 
@@ -35,8 +29,10 @@ const EntryPage = () => {
       if (resMaestros.ok) {
           const dataMaestros = await resMaestros.json();
           if (dataMaestros.bodegas) setBodegas(dataMaestros.bodegas);
-          if (dataMaestros.aforos) setAforos(dataMaestros.aforos);
-          if (dataMaestros.ubicaciones) setUbicacionesLibres(dataMaestros.ubicaciones);
+          // Filtramos para asegurar que el frontend solo tenga en memoria las LIBRES
+          if (dataMaestros.ubicaciones) {
+              setUbicacionesLibres(dataMaestros.ubicaciones.filter(u => u.estado === 'LIBRE'));
+          }
       }
       if (resLotes.ok) {
           const dataLotes = await resLotes.json();
@@ -47,10 +43,6 @@ const EntryPage = () => {
   };
 
   useEffect(() => { cargarDatosSincot(); }, []);
-
-  const corredores = [...new Set(ubicacionesLibres.map(u => u.corredor))].sort();
-  const posiciones = [...new Set(ubicacionesLibres.filter(u => u.corredor === selCorredor).map(u => u.posicion))].sort();
-  const niveles = ubicacionesLibres.filter(u => u.corredor === selCorredor && u.posicion === selPosicion).map(u => u.nivel).sort();
 
   const handleBuscarLoteSincot = (e) => {
     e.preventDefault();
@@ -68,24 +60,32 @@ const EntryPage = () => {
         }
 
         setLoteSeleccionado({ ...lote, cantidad_ingresar: cantidadReal, pallet_actual: ingresados + 1 }); 
-        setSelCorredor(''); setSelPosicion(''); setSelNivel('');
-    } else { alert("❌ Lote o Pallet no encontrado en planificaciones pendientes."); }
+        setSelUbicacion(''); // Reset ubicación
+        setEstrategia('RACK');
+    } else { 
+        alert("❌ Lote o Pallet no encontrado en planificaciones pendientes."); 
+    }
   };
 
   const handleGuardarIngresoFormalSincot = async () => {
-    if (!loteSeleccionado || !costoUnitarioInput) return alert("Ingrese el Costo Unitario.");
-    if (!selCorredor || !selPosicion || !selNivel) return alert("Debe asignar una ubicación completa en la percha.");
-    if (!cabecera.proveedor || !cabecera.nro_documento || !cabecera.dui) return alert("Complete los datos logísticos.");
+    if (!loteSeleccionado) return;
+    
+    // Validamos que el operario haya elegido una ubicación del combo
+    if (!selUbicacion) return alert("⚠️ Debe escribir o seleccionar una ubicación disponible.");
+
+    // Validamos que la ubicación escrita realmente exista y esté libre (por si la escribe a mano)
+    const ubicacionValida = ubicacionesLibres.find(u => u.id_ubicacion === selUbicacion && u.tipo === estrategia);
+    if (!ubicacionValida) return alert("❌ La ubicación ingresada no es válida, no pertenece a esta estrategia o ya está ocupada.");
 
     const token = localStorage.getItem('token');
-    const idUbicacionFinal = `${selCorredor}${selPosicion}${selNivel}`;
-
+    
+    // Eliminamos tipo_asignacion, el backend lo manejará automáticamente
     const itemRecibido = {
         id_lote_planificado: loteSeleccionado.id_lote,
         id_producto: loteSeleccionado.id_producto,
         cantidad_ingresar: loteSeleccionado.cantidad_ingresar,
-        costo_unitario: parseFloat(costoUnitarioInput || 0), 
-        id_ubicacion: idUbicacionFinal
+        costo_unitario: loteSeleccionado.costo_unitario || null, 
+        id_ubicacion: selUbicacion
     };
 
     try {
@@ -93,113 +93,130 @@ const EntryPage = () => {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ cabecera, itemRecibido })
       });
+      
       if (response.ok) {
-        setMensaje({ texto: `✅ Pallet ingresado en Percha ${idUbicacionFinal}. Listo para el siguiente escaneo.`, tipo: 'exito' });
+        setMensaje({ texto: `✅ ¡Pallet asegurado en la ubicación ${selUbicacion}!`, tipo: 'exito' });
         
-        // 2. MEJORA DE UX: No borramos cabecera ni costo. 
-        // Solo limpiamos los datos del pallet actual para agilizar el flujo.
-        setLoteSeleccionado(null); 
-        setLoteEscaneado('');
-        setSelCorredor(''); setSelPosicion(''); setSelNivel('');
+        setLoteSeleccionado(null); setLoteEscaneado(''); setSelUbicacion('');
         
-        await cargarDatosSincot(); 
+        await cargarDatosSincot(); // Recarga y quita la ubicación ocupada de la lista
         setTimeout(() => setMensaje({ texto: '', tipo: '' }), 4000);
+      } else {
+        alert("❌ Ocurrió un error al procesar el ingreso.");
       }
-    } catch (error) { setMensaje({ texto: "❌ Error de red.", tipo: 'error' }); }
+    } catch (error) { 
+      setMensaje({ texto: "❌ Error de conexión con el servidor.", tipo: 'error' }); 
+    }
   };
 
-  const inputStyle = { width: '100%', padding: '12px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '1rem', marginTop: '5px' };
-  const labelStyle = { display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold', fontSize: '0.85rem', color: '#444', textTransform: 'uppercase' };
-  const readOnlyStyle = { ...inputStyle, background: '#f8f9fa', color: '#666', fontWeight: 'bold', border: '1px solid #ddd' };
+  // ESTILOS
+  const inputStyle = { width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid #1a73e8', fontSize: '1.1rem', marginTop: '6px', outline: 'none', fontWeight: 'bold', color: '#202124' };
+  const labelStyle = { display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold', fontSize: '0.8rem', color: '#5f6368', textTransform: 'uppercase', letterSpacing: '0.5px' };
+  const toggleBtnStyle = (active) => ({ flex: 1, padding: '15px', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', transition: 'all 0.2s', background: active ? '#1a73e8' : '#f1f3f4', color: active ? 'white' : '#5f6368', boxShadow: active ? '0 4px 6px rgba(26,115,232,0.2)' : 'none' });
 
-  if (loadingInitial) return <div style={{textAlign:'center', padding:'50px'}}><FaSpinner className="fa-spin" size="2em" color="#1a73e8" /><p>Cargando WMS...</p></div>;
+  if (loadingInitial) return <div style={{textAlign:'center', padding:'50px'}}><FaSpinner className="fa-spin" size="2em" color="#1a73e8" /><p>Inicializando WMS...</p></div>;
 
   return (
-    <div style={{ padding: '25px', background: 'white', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
-      <h2 style={{ color: '#1a73e8', borderBottom: '2px solid #f0f2f5', paddingBottom: '15px', marginBottom: '25px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <FaTruck /> Recepción por Pallet y Asignación de Percha.
-      </h2>
+    <div style={{ padding: '25px', background: '#f8f9fa', minHeight: '100vh', fontFamily: 'system-ui, sans-serif' }}>
+      <div style={{ background: 'white', padding: '30px', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)', maxWidth: '1200px', margin: '0 auto' }}>
+        
+        <h2 style={{ color: '#202124', borderBottom: '2px solid #f0f2f5', paddingBottom: '15px', marginBottom: '25px', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '1.5rem' }}>
+          <div style={{ background: '#e8f0fe', padding: '10px', borderRadius: '10px', color: '#1a73e8' }}><FaTruck /></div>
+          Operación WMS: Recepción y Estiba
+        </h2>
 
-      {mensaje.texto && <div style={{ padding: '15px', marginBottom: '20px', borderRadius: '6px', fontWeight: 'bold', background: '#e6f4ea', color: '#137333', border: `1px solid #137333` }}>{mensaje.texto}</div>}
+        {mensaje.texto && <div style={{ padding: '15px 20px', marginBottom: '25px', borderRadius: '8px', fontWeight: 'bold', background: '#e6f4ea', color: '#137333', display: 'flex', alignItems: 'center', gap: '10px', borderLeft: '4px solid #137333' }}><FaCheckCircle size="1.2em"/> {mensaje.texto}</div>}
 
-      <div style={{ background: '#f8f9fa', padding: '25px', borderRadius: '8px', marginBottom: '30px', border: '1px solid #ddd' }}>
-        <h4 style={{ marginTop: 0, color: '#333', marginBottom: '20px', fontSize: '1.1rem' }}>Datos Logísticos del Arribo</h4>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
-            <div><label style={labelStyle}><FaWarehouse/> Bodega Destino *</label>
-              <select value={cabecera.id_bodega} onChange={e => setCabecera({...cabecera, id_bodega: e.target.value})} style={{...inputStyle, border: '2px solid #1a73e8', fontWeight: 'bold'}}>
-                  {bodegas.map(b => <option key={b.id} value={b.id}>{b.id} - {b.descripcion}</option>)}
-              </select>
-            </div>
-            <div><label style={labelStyle}>Aforo / Inspección</label>
-              <select value={cabecera.id_aforo} onChange={e => setCabecera({...cabecera, id_aforo: e.target.value})} style={inputStyle}>
-                  {aforos.map(a => <option key={a.id} value={a.id}>{a.descripcion}</option>)}
-              </select>
-            </div>
-            <div><label style={labelStyle}><FaTag/> Proveedor / Origen *</label><input type="text" value={cabecera.proveedor} onChange={e => setCabecera({...cabecera, proveedor: e.target.value})} style={inputStyle} /></div>
-            <div><label style={labelStyle}><FaFileAlt/> Factura / Guía *</label><input type="text" value={cabecera.nro_documento} onChange={e => setCabecera({...cabecera, nro_documento: e.target.value})} style={inputStyle} /></div>
-            
-            <div><label style={labelStyle}>DUI (Aduana) *</label><input type="text" value={cabecera.dui} onChange={e => setCabecera({...cabecera, dui: e.target.value})} style={inputStyle} /></div>
-            <div><label style={labelStyle}><FaCar/> Placa Vehículo</label><input type="text" value={cabecera.placa_vehiculo} onChange={e => setCabecera({...cabecera, placa_vehiculo: e.target.value})} style={inputStyle} /></div>
-            <div><label style={labelStyle}><FaShieldAlt/> Guardias (Custodia)</label><input type="number" min="0" value={cabecera.guardias_armados} onChange={e => setCabecera({...cabecera, guardias_armados: e.target.value})} style={inputStyle} /></div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px', marginBottom: '30px' }}>
+          <div style={{ background: '#f8f9fa', padding: '20px', borderRadius: '12px', border: '1px solid #e0e0e0' }}>
+            <label style={labelStyle}><FaWarehouse/> Bodega Física *</label>
+            <select value={cabecera.id_bodega} onChange={e => setCabecera({...cabecera, id_bodega: e.target.value})} style={{...inputStyle, background: 'white'}}>
+                {bodegas.map(b => <option key={b.id} value={b.id}>{b.id} - {b.descripcion}</option>)}
+            </select>
+          </div>
+
+          <div style={{ background: '#e8f0fe', padding: '20px', borderRadius: '12px', border: '1px solid #8ab4f8' }}>
+            <label style={{...labelStyle, color: '#1a73e8', marginBottom: '6px'}}>Escáner de Matrícula (LPN)</label>
+            <form onSubmit={handleBuscarLoteSincot} style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ position: 'relative', flex: 1 }}>
+                    <FaSearch style={{ position: 'absolute', left: '16px', top: '16px', color: '#8ab4f8' }} />
+                    {/* AQUI ESTÁ EL CAMBIO DE COLOR: Fondo oscuro, texto blanco */}
+                    <input 
+                      type="text" 
+                      value={loteEscaneado} 
+                      onChange={e => setLoteEscaneado(e.target.value)} 
+                      style={{...inputStyle, marginTop: 0, paddingLeft: '45px', height: '50px', backgroundColor: '#202124', color: '#ffffff', border: '2px solid #1a73e8'}} 
+                      placeholder="Ej: PLT-PRI-2604001..." 
+                    />
+                </div>
+                <button type="submit" style={{background:'#1a73e8', color:'white', border:'none', padding:'0 30px', borderRadius:'8px', fontWeight:'bold', cursor:'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1rem'}}>
+                  <FaBox /> PROCESAR
+                </button>
+            </form>
+          </div>
         </div>
-      </div>
-
-      <div style={{ background: '#e8f0fe', padding: '25px', borderRadius: '8px', marginBottom: '30px', border: '1px solid #1a73e8' }}>
-        <form onSubmit={handleBuscarLoteSincot} style={{ display: 'flex', gap: '15px' }}>
-            <div style={{ position: 'relative', flex: 1 }}>
-                <FaSearch style={{ position: 'absolute', left: '15px', top: '15px', color: '#1a73e8' }} />
-                <input type="text" value={loteEscaneado} onChange={e => setLoteEscaneado(e.target.value)} style={{...inputStyle, paddingLeft: '45px', fontSize: '1.2rem', marginTop: 0}} placeholder="Escanee ETIQUETA DE PALLET (Ej: DAHAABP0000001)..." />
-            </div>
-            <button type="submit" style={{background:'#1a73e8', color:'white', border:'none', padding:'0 30px', borderRadius:'6px', fontWeight:'bold', cursor:'pointer'}}><FaBox /> ESCANEAR LPN</button>
-        </form>
 
         {loteSeleccionado && (
-            <div style={{ marginTop: '25px', background: 'white', padding: '25px', borderRadius: '8px', border: '2px solid #34a853', position: 'relative' }}>
-                <h3 style={{ margin: '0 0 20px 0', color: '#333' }}>
-                    Asignación de Pallet en Rack de Almacenamiento 
-                    <span style={{fontSize:'0.9rem', color:'#1a73e8', marginLeft:'10px'}}>(Pallet {loteSeleccionado.pallet_actual} de {loteSeleccionado.total_pallets})</span>
-                </h3>
-                <button onClick={() => setLoteSeleccionado(null)} style={{ position: 'absolute', top: '20px', right: '20px', color: '#d93025', border: 'none', background: 'none', cursor:'pointer' }}><FaTimesCircle size="1.5em" /></button>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px', alignItems: 'flex-end', marginBottom: '25px' }}>
-                    <div style={{gridColumn: 'span 2'}}><label style={labelStyle}>Producto a Ingresar </label><input type="text" value={`${loteSeleccionado.nombre_producto} | ${loteSeleccionado.marca}`} style={readOnlyStyle} readOnly /></div>
+            <div style={{ animation: 'fadeIn 0.3s ease-in-out' }}>
+                
+                <div style={{ background: '#202124', color: 'white', padding: '20px 25px', borderRadius: '12px 12px 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                        <label style={{...labelStyle, color: '#fbbc04'}}><FaPallet/> Cantidad (Unid. x Pallet)</label>
-                        <input type="text" value={`${loteSeleccionado.cantidad_ingresar} Unidades`} style={{...readOnlyStyle, color: '#fbbc04', border: '2px solid #fbbc04'}} readOnly />
+                        <h3 style={{ margin: '0 0 5px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <FaPallet color="#fbbc04" /> Detalle del Pallet <span style={{ background: 'rgba(255,255,255,0.2)', padding: '2px 8px', borderRadius: '20px', fontSize: '0.8rem' }}>{loteSeleccionado.pallet_actual} de {loteSeleccionado.total_pallets}</span>
+                        </h3>
+                        <p style={{ margin: 0, color: '#9aa0a6', fontSize: '0.9rem' }}>{loteSeleccionado.sku} | {loteSeleccionado.nombre_producto}</p>
                     </div>
-                    <div><label style={labelStyle}>Costo Unitario ($) *</label><input type="number" step="0.01" value={costoUnitarioInput} onChange={e => setCostoUnitarioInput(e.target.value)} style={{...inputStyle, border:'2px solid #34a853', fontWeight:'bold'}} /></div>
+                    <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '0.8rem', color: '#9aa0a6', textTransform: 'uppercase' }}>CANTIDAD</div>
+                        <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#fbbc04' }}>{loteSeleccionado.cantidad_ingresar} Uds.</div>
+                    </div>
                 </div>
 
-                <div style={{ background: '#f1f3f4', padding: '20px', borderRadius: '8px', border: '1px dashed #aaa' }}>
-                    <h4 style={{ margin: '0 0 15px 0', display: 'flex', alignItems: 'center', gap: '10px' }}><FaMapMarkerAlt color="#d93025"/> Coordenadas de las ubicaciones</h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr) auto', gap: '15px', alignItems: 'end' }}>
-                        
-                        <div>
-                            <label style={labelStyle}>1. Corredor</label>
-                            <select value={selCorredor} onChange={e => {setSelCorredor(e.target.value); setSelPosicion(''); setSelNivel('');}} style={{...inputStyle, border:'2px solid #1a73e8'}}>
-                                <option value="">Seleccione...</option>
-                                {corredores.map(c => <option key={c} value={c}>Corredor {c}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label style={labelStyle}>2. Posición</label>
-                            <select value={selPosicion} onChange={e => {setSelPosicion(e.target.value); setSelNivel('');}} disabled={!selCorredor} style={{...inputStyle, border:'2px solid #1a73e8'}}>
-                                <option value="">Seleccione...</option>
-                                {posiciones.map(p => <option key={p} value={p}>Posición {p}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label style={labelStyle}>3. Nivel (Estante)</label>
-                            <select value={selNivel} onChange={e => setSelNivel(e.target.value)} disabled={!selPosicion} style={{...inputStyle, border:'2px solid #1a73e8'}}>
-                                <option value="">Seleccione...</option>
-                                {niveles.map(n => <option key={n} value={n}>Nivel {n}</option>)}
-                            </select>
-                        </div>
-
-                        <button onClick={handleGuardarIngresoFormalSincot} disabled={!selNivel} style={{background: selNivel ? '#34a853' : '#ccc', color: 'white', border: 'none', padding: '14px 25px', borderRadius: '6px', fontWeight:'bold', cursor: selNivel ? 'pointer' : 'not-allowed', display:'flex', alignItems:'center', gap:'10px'}}>
-                            <FaCheckCircle /> INGRESAR PALLET
+                <div style={{ border: '2px solid #202124', borderTop: 'none', padding: '25px', borderRadius: '0 0 12px 12px', background: 'white' }}>
+                    
+                    <h4 style={{ margin: '0 0 20px 0', color: '#202124', display: 'flex', alignItems: 'center', gap: '10px' }}><FaMapMarkerAlt color="#ea4335"/> Ubicaciones</h4>
+                    
+                    <div style={{ display: 'flex', gap: '15px', marginBottom: '25px' }}>
+                        <button onClick={() => {setEstrategia('RACK'); setSelUbicacion('');}} style={toggleBtnStyle(estrategia === 'RACK')}>
+                            <FaBars size="1.2em" /> POSICIÓN FIJA
+                        </button>
+                        <button onClick={() => {setEstrategia('PISO'); setSelUbicacion('');}} style={toggleBtnStyle(estrategia === 'PISO')}>
+                            <FaLayerGroup size="1.2em" /> POSICIÓN MÓVIL
                         </button>
                     </div>
+
+                    {/* COMBO BUSCADOR ÚNICO DE UBICACIONES */}
+                    <div style={{ background: '#f8f9fa', padding: '25px', borderRadius: '12px', marginBottom: '25px', border: '1px solid #e0e0e0', display: 'flex', justifyContent: 'center' }}>
+                        <div style={{ width: '100%', maxWidth: '500px' }}>
+                            <label style={{...labelStyle, marginBottom: '10px'}}>Asignar Ubicación Física (Disponibles)</label>
+                            
+                            <input 
+                                list="listaUbicaciones" 
+                                value={selUbicacion} 
+                                onChange={(e) => setSelUbicacion(e.target.value.toUpperCase())} 
+                                style={{...inputStyle, background: '#fff9c4', border: '2px solid #fbbc04', textAlign: 'center', fontSize: '1.5rem', letterSpacing: '2px', padding: '15px'}} 
+                                placeholder={estrategia === 'RACK' ? "Ej: A01A01" : "Ej: PA0001"}
+                            />
+                            
+                            <datalist id="listaUbicaciones">
+                                {ubicacionesLibres.filter(u => u.tipo === estrategia).map(u => (
+                                    <option key={u.id_ubicacion} value={u.id_ubicacion} />
+                                ))}
+                            </datalist>
+                            <p style={{ textAlign: 'center', color: '#80868b', fontSize: '0.85rem', marginTop: '10px' }}>Escriba o seleccione una ubicación de la lista. Las ubicaciones ocupadas no se muestran.</p>
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #eee', paddingTop: '20px' }}>
+                        <button 
+                            onClick={handleGuardarIngresoFormalSincot} 
+                            disabled={!selUbicacion} 
+                            style={{ background: selUbicacion ? '#34a853' : '#dadce0', color: 'white', border: 'none', padding: '16px 40px', borderRadius: '8px', fontWeight:'bold', fontSize: '1.1rem', cursor: selUbicacion ? 'pointer' : 'not-allowed', display:'flex', alignItems:'center', gap:'10px', transition: 'all 0.3s' }}
+                        >
+                            <FaCheckCircle size="1.2em" /> CONFIRMAR ESTIBA
+                        </button>
+                    </div>
+
                 </div>
             </div>
         )}

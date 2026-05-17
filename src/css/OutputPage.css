@@ -1,0 +1,108 @@
+/* src/css/OutputPage.css */
+
+.out-container {
+    padding: 25px;
+    background: #f4f6f8;
+    min-height: 100vh;
+    font-family: system-ui, sans-serif;
+}
+
+.out-card-main {
+    background: white;
+    padding: 30px;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.out-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #f0f2f5;
+    padding-bottom: 20px;
+    margin-bottom: 25px;
+}
+
+.out-title {
+    color: #202124;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+    font-size: 1.6rem;
+}
+
+.out-icon-wrapper {
+    background: #fce8e6;
+    padding: 10px;
+    border-radius: 10px;
+    color: #d93025;
+}
+
+.out-box {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+}
+
+.out-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: bold;
+    font-size: 0.8rem;
+    color: #5f6368;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.out-input {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: 2px solid #dadce0;
+    font-size: 1rem;
+    outline: none;
+    box-sizing: border-box;
+    font-weight: bold;
+    color: #202124;
+    background-color: #ffffff; /* Blindaje UX de contraste */
+    appearance: auto;
+}
+
+.out-input:focus { border-color: #d93025; }
+.out-input:disabled { background: #e8eaed; cursor: not-allowed; }
+.out-input option { background-color: #ffffff; color: #202124; }
+
+/* BOTONES DE UBICACIÓN */
+.btn-toggle-group { display: flex; gap: 10px; margin-bottom: 15px; }
+.btn-toggle {
+    flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold;
+    cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; transition: 0.3s;
+}
+.btn-toggle.active { background: #d93025; color: white; }
+.btn-toggle.inactive { background: #f1f3f4; color: #5f6368; }
+
+.out-input-yellow {
+    width: 100%; padding: 15px; border-radius: 8px; border: 2px solid #fbbc04;
+    background: #fff9c4; color: #202124; font-size: 1.2rem; text-align: center;
+    outline: none; font-weight: bold; letter-spacing: 2px; box-sizing: border-box;
+}
+
+/* ZONA LECTORA */
+.out-reader-zone {
+    background: #202124; padding: 25px; border-radius: 12px; margin-bottom: 25px;
+}
+
+.out-reader-input {
+    width: 100%; padding: 15px 15px 15px 50px; border-radius: 8px; border: none;
+    font-size: 1.3rem; background: white; color: #202124; letter-spacing: 1px; box-sizing: border-box;
+}
+
+/* ETIQUETAS TABLA */
+.tag-pallet { background: #fef7e0; color: #b06000; padding: 4px 10px; border-radius: 12px; font-weight: bold; font-size: 0.8rem; }
+.tag-masterbox { background: #e8f0fe; color: #1a73e8; padding: 4px 10px; border-radius: 12px; font-weight: bold; font-size: 0.8rem; }
+.tag-unidad { background: #e6f4ea; color: #137333; padding: 4px 10px; border-radius: 12px; font-weight: bold; font-size: 0.8rem; }

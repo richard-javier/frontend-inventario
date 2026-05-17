@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { FaHistory, FaSearch, FaArrowDown, FaArrowUp, FaCalendarAlt, FaUserTie, FaBox, FaClipboardList, FaFilePdf } from 'react-icons/fa';
+import { FaHistory, FaSearch, FaArrowDown, FaArrowUp, FaCalendarAlt, FaUserTie, FaBox, FaClipboardList, FaFilePdf, FaFileExcel, FaFilter, FaTimes, FaMapMarkerAlt } from 'react-icons/fa'; // <-- ¡Aquí está agregado FaMapMarkerAlt!
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 const HistoryPage = () => {
   const [movimientos, setMovimientos] = useState([]);
   const [busqueda, setBusqueda] = useState('');
+  const [fechaInicio, setFechaInicio] = useState('');
+  const [fechaFin, setFechaFin] = useState('');
   const [loading, setLoading] = useState(true);
 
   const fetchHistorial = async () => {
@@ -29,12 +32,28 @@ const HistoryPage = () => {
     fetchHistorial();
   }, []);
 
-  // Buscador multifuncional
   const movimientosFiltrados = movimientos.filter(mov => {
-    if (!busqueda) return true;
     const termino = busqueda.toLowerCase().trim();
     const textoGlobal = `${mov.nombre_producto} ${mov.codigo_barras} ${mov.origen_destino} ${mov.documento_motivo} ${mov.responsable} ${mov.tipo_movimiento} ${mov.observaciones}`.toLowerCase();
-    return textoGlobal.includes(termino);
+    const coincideTexto = !busqueda || textoGlobal.includes(termino);
+
+    let coincideFecha = true;
+    if (fechaInicio || fechaFin) {
+        const fechaMov = new Date(mov.fecha);
+        if (fechaInicio) {
+            const inicio = new Date(fechaInicio);
+            inicio.setHours(0, 0, 0, 0); 
+            inicio.setMinutes(inicio.getMinutes() + inicio.getTimezoneOffset());
+            if (fechaMov < inicio) coincideFecha = false;
+        }
+        if (fechaFin) {
+            const fin = new Date(fechaFin);
+            fin.setHours(23, 59, 59, 999); 
+            fin.setMinutes(fin.getMinutes() + fin.getTimezoneOffset());
+            if (fechaMov > fin) coincideFecha = false;
+        }
+    }
+    return coincideTexto && coincideFecha;
   });
 
   const formatearFecha = (fechaSQL) => {
@@ -45,183 +64,167 @@ const HistoryPage = () => {
     });
   };
 
-  // --- NUEVA FUNCIÓN: GENERAR REPORTE PDF DEL KARDEX ---
+  const limpiarFiltros = () => {
+      setBusqueda('');
+      setFechaInicio('');
+      setFechaFin('');
+  };
+
+  // PDF
   const generarPDFReporte = () => {
-    if (movimientosFiltrados.length === 0) {
-        return alert("No hay datos para exportar.");
-    }
-
-    const doc = new jsPDF('landscape'); // 'landscape' para que la tabla ancha quepa bien
-
-    // Encabezado Corporativo
+    if (movimientosFiltrados.length === 0) return alert("No hay datos para exportar.");
+    const doc = new jsPDF('landscape'); 
     doc.setFontSize(18);
     doc.setTextColor(26, 115, 232);
-    doc.text("SINCOT - REPORTE DE INGRESOS Y EGRESOS DE PRODUCTOS", 148, 20, { align: 'center' });
-    
+    doc.text("SINCOT - KARDEX: REPORTE DE INGRESOS Y EGRESOS", 148, 20, { align: 'center' });
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text("Sistema de Gestión de Inventarios.", 148, 27, { align: 'center' });
-    doc.text(`Fecha del Reporte: ${new Date().toLocaleString()}`, 148, 33, { align: 'center' });
+    const periodoTexto = (fechaInicio || fechaFin) ? `Período: ${fechaInicio || 'Inicio'} al ${fechaFin || 'Hoy'}` : `Reporte Histórico Completo`;
+    doc.text(periodoTexto, 148, 27, { align: 'center' });
+    doc.text(`Generado: ${new Date().toLocaleString('es-ES')}`, 148, 33, { align: 'center' });
     doc.line(20, 38, 275, 38);
 
-    // Preparar los datos para la tabla
     const columns = ["Fecha", "Tipo", "Producto", "Cant.", "Origen / Destino", "Documento/Motivo", "Responsable"];
     const rows = movimientosFiltrados.map(mov => [
-        formatearFecha(mov.fecha),
-        mov.tipo_movimiento,
-        `${mov.nombre_producto}\n(${mov.codigo_barras})`,
+        formatearFecha(mov.fecha), mov.tipo_movimiento, `${mov.nombre_producto}\n(SKU: ${mov.codigo_barras})`,
         mov.tipo_movimiento === 'INGRESO' ? `+${mov.cantidad}` : `-${mov.cantidad}`,
-        mov.origen_destino || 'N/A',
-        mov.documento_motivo || 'N/A',
-        mov.responsable
+        mov.origen_destino || 'N/A', mov.documento_motivo || 'N/A', mov.responsable
     ]);
 
     autoTable(doc, {
-      startY: 45,
-      head: [columns],
-      body: rows,
-      theme: 'grid',
-      headStyles: { fillColor: [33, 37, 41] }, // Gris oscuro para profesionalismo
-      styles: { fontSize: 8 },
-      columnStyles: {
-          3: { halign: 'center', fontStyle: 'bold' }, // Cantidad centrada y negrita
-          1: { halign: 'center' }
-      },
+      startY: 45, head: [columns], body: rows, theme: 'grid',
+      headStyles: { fillColor: [32, 33, 36], textColor: 255 }, styles: { fontSize: 8 },
+      columnStyles: { 3: { halign: 'center', fontStyle: 'bold' }, 1: { halign: 'center', fontStyle: 'bold' } },
       didParseCell: function (data) {
-          // Pintar verde los ingresos y rojo las salidas en el PDF
-          if (data.column.index === 1 && data.section === 'body') {
-              if (data.cell.raw === 'INGRESO') {
-                  data.cell.styles.textColor = [19, 115, 51]; // Verde
-              } else {
-                  data.cell.styles.textColor = [217, 48, 37]; // Rojo
-              }
-          }
+          if (data.column.index === 1 && data.section === 'body') data.cell.styles.textColor = data.cell.raw === 'INGRESO' ? [19, 115, 51] : [217, 48, 37];
+          if (data.column.index === 3 && data.section === 'body') data.cell.styles.textColor = data.cell.raw.startsWith('+') ? [19, 115, 51] : [217, 48, 37];
       }
     });
 
-    // Pie de página
     const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFontSize(9);
-        doc.text(`Página ${i} de ${pageCount}`, 275, 200, { align: 'right' });
+        doc.setPage(i); doc.setFontSize(9); doc.text(`Página ${i} de ${pageCount}`, 275, 200, { align: 'right' });
     }
-
-    doc.save(`Reporte_HISTORIAL_SINCOT_${new Date().getTime()}.pdf`);
+    doc.save(`Kardex_Movimientos_${new Date().getTime()}.pdf`);
   };
 
+  // EXCEL
+  const generarExcelReporte = () => {
+    if (movimientosFiltrados.length === 0) return alert("No hay datos para exportar.");
+    const dataExcel = movimientosFiltrados.map(mov => ({
+        "Fecha y Hora": formatearFecha(mov.fecha), "Tipo de Movimiento": mov.tipo_movimiento,
+        "Producto": mov.nombre_producto, "SKU / Identificador": mov.codigo_barras,
+        "Cantidad": mov.tipo_movimiento === 'INGRESO' ? mov.cantidad : -mov.cantidad,
+        "Origen / Destino": mov.origen_destino || 'N/A', "Ref. Documental": mov.documento_motivo || 'N/A',
+        "Usuario Responsable": mov.responsable, "Observaciones": mov.observaciones || ''
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(dataExcel);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Kardex");
+    XLSX.writeFile(workbook, `Kardex_Movimientos_${new Date().getTime()}.xlsx`);
+  };
+
+  const inputStyle = { padding: '12px 15px', borderRadius: '8px', border: '1px solid #5f6368', fontSize: '0.95rem', outline: 'none', backgroundColor: '#202124', color: '#ffffff', flex: 1, colorScheme: 'dark' };
+  const labelStyle = { display: 'block', fontSize: '0.8rem', fontWeight: 'bold', color: '#5f6368', textTransform: 'uppercase', marginBottom: '5px' };
+
   return (
-    <div style={{ padding: '20px', background: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-      
-      {/* CABECERA */}
-      <div style={{ borderBottom: '2px solid #f0f2f5', paddingBottom: '15px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-            <h2 style={{ color: '#1a73e8', display: 'flex', alignItems: 'center', gap: '10px', marginTop: 0, marginBottom: '5px' }}>
-                <FaHistory /> Historial de Movimientos De Productos.
-            </h2>
-            <p style={{ color: '#666', fontSize: '0.9rem', margin: 0 }}>
-                Registro de trazabilidad de entradas y salidas.
-            </p>
+    <div style={{ padding: '25px', background: '#f4f6f8', minHeight: '100vh', fontFamily: 'system-ui, sans-serif' }}>
+        <div style={{ background: 'white', padding: '30px', borderRadius: '16px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', maxWidth: '1400px', margin: '0 auto' }}>
+            
+            <div style={{ borderBottom: '2px solid #f0f2f5', paddingBottom: '20px', marginBottom: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
+                <div>
+                    <h2 style={{ color: '#1a73e8', display: 'flex', alignItems: 'center', gap: '12px', marginTop: 0, marginBottom: '8px', fontSize: '1.6rem' }}>
+                        <div style={{ background: '#e8f0fe', padding: '10px', borderRadius: '10px', color: '#1a73e8' }}><FaHistory /></div>
+                        Kardex: Trazabilidad de Movimientos
+                    </h2>
+                    <p style={{ color: '#5f6368', fontSize: '0.95rem', margin: 0 }}>Registro histórico y auditable de ingresos y salidas físicas de bodega.</p>
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <button onClick={generarExcelReporte} style={{ background: '#e6f4ea', color: '#137333', border: '1px solid #e6f4ea', padding: '12px 20px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: '0.2s' }}><FaFileExcel /> Excel</button>
+                    <button onClick={generarPDFReporte} style={{ background: '#fce8e6', color: '#d93025', border: '1px solid #fce8e6', padding: '12px 20px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: '0.2s' }}><FaFilePdf /> Descargar PDF</button>
+                </div>
+            </div>
+
+            <div style={{ background: '#f8f9fa', padding: '20px', borderRadius: '12px', marginBottom: '25px', border: '1px solid #e0e0e0', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'flex-end' }}>
+                <div style={{ flex: 2, minWidth: '250px' }}>
+                    <label style={labelStyle}>Búsqueda General</label>
+                    <div style={{ position: 'relative' }}>
+                        <FaSearch style={{ position: 'absolute', left: '16px', top: '14px', color: '#8ab4f8' }} />
+                        <input type="text" placeholder="Buscar SKU, responsable, documento..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} style={{ ...inputStyle, width: '100%', paddingLeft: '45px', boxSizing: 'border-box' }} />
+                    </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '15px', flex: 2, minWidth: '300px' }}>
+                    <div style={{ flex: 1 }}>
+                        <label style={labelStyle}><FaCalendarAlt style={{marginRight: '5px'}}/> Desde la fecha:</label>
+                        <input type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} style={inputStyle} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                        <label style={labelStyle}><FaCalendarAlt style={{marginRight: '5px'}}/> Hasta la fecha:</label>
+                        <input type="date" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} style={inputStyle} />
+                    </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                    {(busqueda || fechaInicio || fechaFin) && (
+                        <button onClick={limpiarFiltros} style={{ background: 'transparent', border: '1px solid #dadce0', color: '#5f6368', padding: '10px 15px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '5px' }}><FaTimes /> Limpiar</button>
+                    )}
+                    <div style={{ background: '#202124', padding: '12px 20px', borderRadius: '8px', color: 'white', fontWeight: 'bold' }}>{movimientosFiltrados.length} Registros</div>
+                </div>
+            </div>
+
+            <div style={{ overflowX: 'auto', border: '1px solid #e0e0e0', borderRadius: '12px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1200px', background: 'white' }}>
+                    <thead>
+                        <tr style={{ background: '#f8f9fa', color: '#5f6368', textAlign: 'left', fontSize: '0.85rem', textTransform: 'uppercase' }}>
+                            <th style={{ padding: '16px', borderBottom: '2px solid #dadce0' }}>Fecha y Hora</th>
+                            <th style={{ padding: '16px', borderBottom: '2px solid #dadce0', textAlign: 'center' }}>Movimiento</th>
+                            <th style={{ padding: '16px', borderBottom: '2px solid #dadce0' }}>Producto / SKU</th>
+                            <th style={{ padding: '16px', borderBottom: '2px solid #dadce0', textAlign: 'center' }}>Cant.</th>
+                            <th style={{ padding: '16px', borderBottom: '2px solid #dadce0' }}>Destino / Ref. Operativa</th>
+                            <th style={{ padding: '16px', borderBottom: '2px solid #dadce0' }}>Usuario Resp.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {loading ? (
+                            <tr><td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: '#80868b' }}>Cargando historial auditable...</td></tr>
+                        ) : movimientosFiltrados.length > 0 ? (
+                            movimientosFiltrados.map((mov, index) => {
+                                const esIngreso = mov.tipo_movimiento === 'INGRESO';
+                                return (
+                                    <tr key={index} style={{ borderBottom: '1px solid #f0f2f5', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = '#f8f9fa'} onMouseOut={(e) => e.currentTarget.style.background = 'white'}>
+                                        <td style={{ padding: '16px', color: '#3c4043', fontWeight: '500', fontSize: '0.9rem' }}>{formatearFecha(mov.fecha)}</td>
+                                        <td style={{ padding: '16px', textAlign: 'center' }}>
+                                            <span style={{ background: esIngreso ? '#e6f4ea' : '#fce8e6', color: esIngreso ? '#137333' : '#d93025', padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                                {esIngreso ? <FaArrowDown /> : <FaArrowUp />} {mov.tipo_movimiento}
+                                            </span>
+                                        </td>
+                                        <td style={{ padding: '16px' }}>
+                                            <div style={{ fontWeight: 'bold', color: '#202124', fontSize: '0.95rem' }}>{mov.nombre_producto}</div>
+                                            <div style={{ fontSize: '0.85rem', color: '#80868b', marginTop: '4px' }}><FaBox style={{display:'inline', marginRight:'4px'}}/>{mov.codigo_barras}</div>
+                                        </td>
+                                        <td style={{ padding: '16px', textAlign: 'center', fontWeight: 'bold', fontSize: '1.2rem', color: esIngreso ? '#137333' : '#d93025' }}>
+                                            {esIngreso ? '+' : '-'}{mov.cantidad}
+                                        </td>
+                                        <td style={{ padding: '16px' }}>
+                                            <div style={{ fontWeight: '600', color: '#3c4043' }}><FaMapMarkerAlt style={{display:'inline', color:'#8ab4f8', marginRight:'6px'}}/>{mov.origen_destino || 'N/A'}</div>
+                                            <div style={{ fontSize: '0.85rem', color: '#5f6368', marginTop: '4px' }}><FaClipboardList style={{display:'inline', color:'#8ab4f8', marginRight:'6px'}}/>Ref: {mov.documento_motivo}</div>
+                                        </td>
+                                        <td style={{ padding: '16px' }}>
+                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#f1f3f4', padding: '6px 12px', borderRadius: '8px', color: '#202124', fontSize: '0.9rem', fontWeight: '500' }}>
+                                                <FaUserTie color="#8ab4f8" /> {mov.responsable}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })
+                        ) : (
+                            <tr><td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: '#80868b' }}>No se encontraron registros en este período.</td></tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
         </div>
-        {/* BOTÓN NUEVO PARA PDF */}
-        <button 
-            onClick={generarPDFReporte}
-            style={{ background: '#d93025', color: 'white', border: 'none', padding: '12px 20px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 2px 4px rgba(217, 48, 37, 0.3)' }}
-        >
-            <FaFilePdf /> DESCARGAR REPORTE PDF
-        </button>
-      </div>
-
-      {/* BARRA DE BÚSQUEDA */}
-      <div style={{ background: '#f8f9fa', padding: '15px', borderRadius: '8px', marginBottom: '20px', display: 'flex', gap: '15px', alignItems: 'center' }}>
-        <div style={{ position: 'relative', flex: 1 }}>
-          <FaSearch style={{ position: 'absolute', left: '15px', top: '12px', color: '#1a73e8' }} />
-          <input 
-            type="text" 
-            placeholder="Buscar por producto, código, proveedor, responsable..." 
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            style={{ width: '100%', padding: '10px 10px 10px 40px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '1rem', outline: 'none', boxSizing: 'border-box' }}
-          />
-        </div>
-        <div style={{ background: '#343a40', padding: '10px 20px', borderRadius: '6px', color: 'white', fontWeight: 'bold' }}>
-            {movimientosFiltrados.length} Registros
-        </div>
-      </div>
-
-      {/* TABLA DE KARDEX */}
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1200px' }}>
-          <thead>
-            <tr style={{ background: '#343a40', color: 'white', textAlign: 'left', fontSize: '0.9rem' }}>
-              <th style={{ padding: '12px' }}><FaCalendarAlt /> Fecha y Hora</th>
-              <th style={{ padding: '12px' }}>Tipo</th>
-              <th style={{ padding: '12px' }}><FaBox /> Producto / Código</th>
-              <th style={{ padding: '12px', textAlign: 'center' }}>Cant.</th>
-              <th style={{ padding: '12px' }}><FaClipboardList /> Origen / Destino / Documento</th>
-              <th style={{ padding: '12px' }}><FaUserTie /> Usuario Resp.</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan="6" style={{ padding: '30px', textAlign: 'center' }}>Cargando historial...</td></tr>
-            ) : movimientosFiltrados.length > 0 ? (
-              movimientosFiltrados.map((mov, index) => {
-                const esIngreso = mov.tipo_movimiento === 'INGRESO';
-                
-                return (
-                  <tr key={index} style={{ borderBottom: '1px solid #eee', fontSize: '0.9rem', background: index % 2 === 0 ? '#fff' : '#fcfcfc' }}>
-                    
-                    <td style={{ padding: '12px', color: '#555', fontWeight: '500' }}>
-                        {formatearFecha(mov.fecha)}
-                    </td>
-                    
-                    <td style={{ padding: '12px' }}>
-                      <span style={{ 
-                          background: esIngreso ? '#e6f4ea' : '#fce8e6', 
-                          color: esIngreso ? '#137333' : '#c5221f', 
-                          padding: '5px 10px', 
-                          borderRadius: '20px', 
-                          fontWeight: 'bold', 
-                          fontSize: '0.8rem',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '5px'
-                      }}>
-                        {esIngreso ? <FaArrowDown /> : <FaArrowUp />}
-                        {mov.tipo_movimiento}
-                      </span>
-                    </td>
-                    
-                    <td style={{ padding: '12px' }}>
-                        <div style={{ fontWeight: 'bold', color: '#333' }}>{mov.nombre_producto}</div>
-                        <div style={{ fontSize: '0.8rem', color: '#666', fontFamily: 'monospace' }}>{mov.codigo_barras}</div>
-                    </td>
-                    
-                    <td style={{ padding: '12px', textAlign: 'center', fontWeight: 'bold', fontSize: '1.1rem', color: esIngreso ? '#137333' : '#c5221f' }}>
-                        {esIngreso ? '+' : '-'}{mov.cantidad}
-                    </td>
-                    
-                    <td style={{ padding: '12px' }}>
-                        <div style={{ fontWeight: '500', color: '#333' }}>{mov.origen_destino || 'N/A'}</div>
-                        <div style={{ fontSize: '0.8rem', color: '#666' }}>Ref: {mov.documento_motivo}</div>
-                        {mov.observaciones && <div style={{ fontSize: '0.75rem', color: '#888', fontStyle: 'italic', marginTop: '4px' }}>Obs: {mov.observaciones}</div>}
-                    </td>
-
-                    <td style={{ padding: '12px', color: '#444' }}>
-                        {mov.responsable}
-                    </td>
-                    
-                  </tr>
-                );
-              })
-            ) : (
-              <tr><td colSpan="6" style={{ padding: '30px', textAlign: 'center', color: '#888' }}>No hay registros de movimientos.</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
     </div>
   );
 };

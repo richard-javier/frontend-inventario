@@ -27,43 +27,44 @@ const MainLayout = ({ children, onLogout }) => {
         { label: 'Crear Productos', path: '/create-product', icon: <FaTags/> },
         { label: 'Crear Lotes', path: '/create-lot', icon: <FaBarcode/> },
         { label: 'Nota de Ingreso', path: '/receiving-note', icon: <FaFileSignature/> },
-        { label: 'Archivo Notas de Ingreso', path: '/receiving-history', icon: <FaClipboardList/> }, // <--- INTEGRADO
+        { label: 'Archivo Notas de Ingreso', path: '/receiving-history', icon: <FaClipboardList/> }, 
         { label: 'Ingreso de Productos', path: '/receiving-products', icon: <FaCubes/> }
       ]
     },
     { 
-      id: 'produccion', name: 'Producción', icon: <FaBarcode size="2.8em"/>, color: '#F06050', defaultPath: '/scan-imei', 
+      id: 'produccion', name: 'Producción', icon: <FaBarcode size="2.8em"/>, color: '#F06050', defaultPath: '/scan', 
       menus: [
-        { label: 'Escaneo de Equipos', path: '/scan-imei', icon: <FaBarcode/> }
+        { label: 'Serializado de Equipos', path: '/scan', icon: <FaBarcode/> }
       ]
     },
     { 
-      id: 'almacenamiento', name: 'Almacenamiento', icon: <FaWarehouse size="2.8em"/>, color: '#D9534F', defaultPath: '/inventory-annual', 
+      id: 'almacenamiento', name: 'Almacenamiento', icon: <FaWarehouse size="2.8em"/>, color: '#D9534F', defaultPath: '/ai-predictive', 
       menus: [
         { label: 'Inventario Anual', path: '/inventory-annual', icon: <FaClipboardList/> },
         { label: 'Inventario Cíclico', path: '/inventory-cyclic', icon: <FaClipboardList/> },
         { label: 'IA Analítica Predictiva', path: '/ai-predictive', icon: <FaBrain color="#fbbc04"/> },
-        { label: 'IA Detección Anomalías', path: '/ai-anomalies', icon: <FaBrain color="#ea4335"/> }
+        { label: 'Auditoría de Anomalías IA', path: '/ai-audit', icon: <FaBrain color="#d93025"/> },
       ]
     },
     { 
       id: 'despacho', name: 'Despacho', icon: <FaFileExport size="2.8em"/>, color: '#F0AD4E', defaultPath: '/output', 
       menus: [
-        { label: 'Nota de Egreso', path: '/output', icon: <FaFileSignature/> }, // <--- INTEGRADO (/output)
+        { label: 'Nota de Egreso', path: '/output', icon: <FaFileSignature/> }, 
         { label: 'Guía de Remisión', path: '/remission-guide', icon: <FaFileSignature/> }
       ]
     },
     { 
       id: 'reportes', name: 'Reportes', icon: <FaChartPie size="2.8em"/>, color: '#5CB85C', defaultPath: '/inventory', 
       menus: [
-        { label: 'Stock General', path: '/inventory', icon: <FaBoxes/> }, // <--- INTEGRADO (/inventory)
-        { label: 'Stock Valorado', path: '/report-valued', icon: <FaChartLine/> },
-        { label: 'Trazabilidad (Movimientos)', path: '/history', icon: <FaSearch/> } // <--- INTEGRADO (/history)
+        { label: 'Stock General', path: '/inventory', icon: <FaBoxes/> }, 
+        { label: 'Stock Valorado', path: '/valued-stock', icon: <FaChartLine/> },
+        { label: 'Trazabilidad (Movimientos)', path: '/history', icon: <FaSearch/> } 
       ]
     },
     { 
       id: 'transferencia', name: 'Transferencia', icon: <FaExchangeAlt size="2.8em"/>, color: '#5BC0DE', defaultPath: '/transfers', 
       menus: [
+        // --- AQUÍ ESTÁ EL MENÚ DE TRANSFERENCIA ---
         { label: 'Gestión de Transferencias', path: '/transfers', icon: <FaExchangeAlt/> }
       ]
     }
@@ -72,21 +73,15 @@ const MainLayout = ({ children, onLogout }) => {
   // ==========================================
   // 2. LÓGICA DE NAVEGACIÓN DINÁMICA
   // ==========================================
-  // Detecta si estamos en la pantalla inicial de aplicaciones (Home)
   const isHome = location.pathname === '/home' || location.pathname === '/';
-  
-  // Encuentra a qué "Aplicación" pertenece la ruta actual para mostrar su menú
   const activeApp = appModules.find(app => app.menus.some(m => m.path === location.pathname));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f4f6f8', fontFamily: 'system-ui, sans-serif' }}>
       
-      {/* BARRA SUPERIOR (TOP NAV) - Estilo Odoo */}
       <header style={{ background: '#202124', color: 'white', height: '55px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px', zIndex: 10 }}>
         
-        {/* Zona Izquierda: App Switcher y Títulos */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          {/* Botón de "Aplicaciones" (El mosaico) */}
           <button 
             onClick={() => navigate('/home')} 
             title="Volver a Aplicaciones"
@@ -108,7 +103,6 @@ const MainLayout = ({ children, onLogout }) => {
           </div>
         </div>
 
-        {/* Zona Derecha: Usuario y Salir */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <FaUserCircle size="1.5em" color="#8ab4f8" />
@@ -123,10 +117,8 @@ const MainLayout = ({ children, onLogout }) => {
         </div>
       </header>
 
-      {/* ÁREA CENTRAL */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         
-        {/* BARRA LATERAL DINÁMICA (Se oculta en el Home, aparece en los Módulos) */}
         {!isHome && activeApp && (
           <aside style={{ width: '250px', background: 'white', borderRight: '1px solid #dadce0', display: 'flex', flexDirection: 'column' }}>
             
@@ -162,12 +154,8 @@ const MainLayout = ({ children, onLogout }) => {
           </aside>
         )}
 
-        {/* CONTENIDO PRINCIPAL */}
         <main style={{ flex: 1, overflowY: 'auto', background: isHome ? '#e9ecef' : '#f4f6f8' }}>
           {isHome ? (
-            // ==========================================
-            // VISTA ODOO: ESCRITORIO DE APLICACIONES
-            // ==========================================
             <div style={{ padding: '40px', display: 'flex', flexWrap: 'wrap', gap: '30px', justifyContent: 'center', maxWidth: '1200px', margin: '0 auto' }}>
               {appModules.map((app) => (
                 <div 
@@ -189,7 +177,6 @@ const MainLayout = ({ children, onLogout }) => {
               ))}
             </div>
           ) : (
-            // Aquí se carga la pantalla de React Router (ReceivingNote, Dashboard, etc)
             <div style={{ padding: '15px' }}>
               {children}
             </div>

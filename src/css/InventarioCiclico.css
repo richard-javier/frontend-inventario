@@ -1,0 +1,162 @@
+/* src/css/InventarioCiclico.css */
+
+.cyclic-container {
+    padding: 25px;
+    background: #f4f6f8;
+    min-height: 100vh;
+    font-family: system-ui, sans-serif;
+}
+
+.cyclic-card-main {
+    background: white;
+    padding: 30px;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.cyclic-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #f0f2f5;
+    padding-bottom: 20px;
+    margin-bottom: 25px;
+}
+
+.cyclic-title {
+    color: #202124;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+    font-size: 1.6rem;
+}
+
+.cyclic-icon-wrapper {
+    background: #e8f0fe;
+    padding: 10px;
+    border-radius: 10px;
+    color: #1a73e8;
+}
+
+/* STEPPER (Barra de progreso) */
+.stepper-container {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 30px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 15px;
+    border: 1px solid #e0e0e0;
+}
+
+.step-item {
+    flex: 1;
+    text-align: center;
+    padding: 15px;
+    border-radius: 8px;
+    font-weight: bold;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: #9aa0a6;
+    transition: 0.3s;
+}
+
+.step-item.active {
+    background: #1a73e8;
+    color: white;
+    box-shadow: 0 4px 10px rgba(26,115,232,0.2);
+}
+
+.step-item.completed {
+    color: #137333;
+}
+
+/* CAJAS DE FORMULARIO */
+.cyclic-box {
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+    margin-bottom: 20px;
+}
+
+.cyclic-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: bold;
+    font-size: 0.85rem;
+    color: #5f6368;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+.cyclic-input {
+    width: 100%;
+    padding: 14px;
+    border-radius: 8px;
+    border: 2px solid #dadce0;
+    font-size: 1.1rem;
+    outline: none;
+    box-sizing: border-box;
+    font-weight: bold;
+    color: #202124;
+    background-color: #ffffff; /* Forzamos fondo blanco puro */
+    appearance: auto;
+}
+
+.cyclic-input:focus { border-color: #1a73e8; }
+.cyclic-input:disabled { background: #f1f3f4; color: #1a73e8; cursor: not-allowed; border-color: transparent;}
+
+/* Blindaje UX: Opciones del desplegable siempre blancas */
+.cyclic-input option {
+    background-color: #ffffff;
+    color: #202124;
+    font-weight: normal;
+    padding: 10px;
+}
+
+/* TABLAS */
+.cyclic-table-container {
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 25px;
+}
+
+.cyclic-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+
+.cyclic-table th {
+    background: #f8f9fa;
+    color: #5f6368;
+    padding: 15px;
+    text-align: left;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.cyclic-table td {
+    padding: 15px;
+    border-bottom: 1px solid #f0f2f5;
+    color: #202124;
+}
+
+/* ESTILOS DE ESTADO (QISS) */
+.tag-qiss-ok { background: #e6f4ea; color: #137333; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; }
+.tag-qiss-alert { background: #fce8e6; color: #d93025; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px;}
+
+.btn-primary-action {
+    background: #1a73e8; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 1.1rem; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; transition: 0.3s;
+}
+.btn-primary-action:disabled { background: #dadce0; cursor: not-allowed; }
+.btn-success-action { background: #137333; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 1.1rem; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; }

@@ -14,7 +14,12 @@ import MainLayout from './controllers/MainLayout.jsx';
 import ReceivingNotePage from './controllers/ReceivingNotePage.jsx';
 import CreateLotPage from './controllers/CreateLotPage.jsx'; 
 import ReceivingHistory from './controllers/ReceivingHistory.jsx';
-
+import ScanPage from './controllers/ScanPage.jsx';
+import ValuedStockPage from './controllers/ValuedStockPage.jsx';
+import TransferPage from './controllers/TransferPage.jsx';
+import AiPredictivePage from './controllers/AiPredictivePage.jsx';
+import InventarioCiclico from './controllers/InventarioCiclico.jsx'; 
+import AiAuditPage from './controllers/AiAuditPage.jsx';
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
 
@@ -57,6 +62,8 @@ function App() {
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/inventory" element={<InventoryPage />} />
                 <Route path="/create-product" element={<CreateProduct />} />
+                <Route path="/inventory-cyclic" element={<InventarioCiclico />} />
+                <Route path="/ai-audit" element={<AiAuditPage />} />
                 
                 {/* RUTAS DEL FLUJO DE RECEPCIÓN */}
                 <Route path="/receiving-note" element={<ReceivingNotePage />} />
@@ -65,7 +72,10 @@ function App() {
                 <Route path="/receiving-history" element={<ReceivingHistory />} />
                 <Route path="/output" element={<OutputPage />} />
                 <Route path="/history" element={<HistoryPage />} />
-                
+                <Route path="/scan" element={<ScanPage />} />
+                <Route path="/valued-stock" element={<ValuedStockPage />} />
+                <Route path="/transfers" element={<TransferPage />} />
+                <Route path="/ai-predictive" element={<AiPredictivePage />} />
                 {/* Redirección por defecto: si el usuario escribe una ruta que no existe, va al menú principal */}
                 <Route path="*" element={<Navigate to="/home" />} />
               </Routes>

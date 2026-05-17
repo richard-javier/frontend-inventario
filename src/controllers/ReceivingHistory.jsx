@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaSearch, FaFilePdf, FaCalendarAlt, FaUser, FaBuilding, FaClipboardList } from 'react-icons/fa';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { generarNotaIngresoPDF } from '../utils/pdfGenerator'; 
 
 const ReceivingHistory = () => {
     const [notas, setNotas] = useState([]);
@@ -23,7 +22,6 @@ const ReceivingHistory = () => {
 
     useEffect(() => { fetchNotas(); }, []);
 
-    // Función para RE-GENERAR el PDF desde la base de datos
     const descargarPDF = async (idNota) => {
         const token = localStorage.getItem('token');
         try {
@@ -32,26 +30,45 @@ const ReceivingHistory = () => {
             });
             const { cabecera, productos } = await response.json();
 
-            const doc = new jsPDF();
-            // ... (Aquí pegamos la misma lógica de PDF que usamos en ReceivingNotePage)
-            // Solo que usamos los datos de 'cabecera' y 'productos' que vienen del servidor
-            doc.setFontSize(20);
-            doc.setTextColor(26, 115, 232);
-            doc.text("NOTA DE INGRESO A BODEGA (COPIA)", 105, 20, { align: 'center' });
-            doc.setFontSize(12);
-            doc.setTextColor(234, 67, 53);
-            doc.text(`Nº ${cabecera.secuencial}`, 190, 20, { align: 'right' });
-            
-            // Tabla de productos
-            autoTable(doc, {
-                startY: 75,
-                head: [["Pérdida", "Recibida", "Pendiente", "Descripción", "Guía"]],
-                body: productos.map(p => [p.perdida, p.recibida, p.pendiente, p.descripcion_producto, p.guia_secuencial]),
-                headStyles: { fillColor: [26, 115, 232] }
-            });
+            const notaFormateada = {
+                ...cabecera,
+                fecha: new Date(cabecera.fecha).toISOString().split('T')[0],
+                hora: cabecera.hora,
+                proveedor: cabecera.proveedor,
+                ordenCompra: cabecera.orden_compra || '',
+                secuencial: cabecera.secuencial,
+                provieneDe: cabecera.proviene_de || '',
+                placaVehiculo: cabecera.placa_vehiculo || '',
+                estadoMercaderia: cabecera.estado_mercaderia || '',
+                aforo: cabecera.aforo || '',
+                observaciones: cabecera.observaciones,
+                // =========================================================
+                // CORRECCIÓN: Agregamos entregado_nombre por si acaso
+                // =========================================================
+                entregadoPor: { 
+                    nombre: cabecera.entregado_nombre || cabecera.entregado_por || '', 
+                    cargo: cabecera.entregado_cargo || '' 
+                },
+                recibidoPor: { 
+                    nombre: cabecera.recibido_nombre || cabecera.recibido_por || '', 
+                    cargo: cabecera.recibido_cargo || '' 
+                }
+            };
 
-            doc.save(`Nota_${cabecera.secuencial}_Archivo.pdf`);
-        } catch (err) { alert("Error al generar el documento."); }
+            const productosFormateados = productos.map(p => ({
+                perdida: p.perdida || 0,
+                recibida: p.recibida || 0,
+                pendiente: p.pendiente || 0,
+                descripcion: p.descripcion_producto || p.nombre_producto || '',
+                guia: p.guia_secuencial || cabecera.secuencial
+            }));
+
+            generarNotaIngresoPDF(notaFormateada, productosFormateados);
+
+        } catch (err) { 
+            console.error(err);
+            alert("Error al generar el documento."); 
+        }
     };
 
     const notasFiltradas = notas.filter(n => 
@@ -100,7 +117,7 @@ const ReceivingHistory = () => {
                                     <td style={tdStyle}><FaUser color="#aaa" /> {n.recibido_nombre}</td>
                                     <td style={{ ...tdStyle, textAlign: 'center' }}>
                                         <button onClick={() => descargarPDF(n.id_nota)} style={btnPdfStyle}>
-                                            <FaFilePdf /> Descargar Copia
+                                            <FaFilePdf /> Descargar Documento
                                         </button>
                                     </td>
                                 </tr>
@@ -113,7 +130,6 @@ const ReceivingHistory = () => {
     );
 };
 
-// Estilos rápidos
 const inputBusquedaStyle = { width: '100%', padding: '12px 12px 12px 45px', borderRadius: '8px', border: '1px solid #dadce0', fontSize: '1rem', outline: 'none' };
 const thStyle = { padding: '15px', borderBottom: '2px solid #eee', fontSize: '0.85rem', textTransform: 'uppercase' };
 const tdStyle = { padding: '15px', fontSize: '0.9rem', color: '#202124' };

@@ -1,56 +1,63 @@
 /* src/css/global.css */
+
 /* Importar fuentes de Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&family=Poppins:wght@600;700&family=Roboto:wght@500&display=swap');
 
 /* =======================================
-   1. VARIABLES Y RESET BÁSICO (THEME)
+   1. VARIABLES DE ESTADO Y TEMA (SINCOT WMS)
    ======================================= */
 :root {
-    /* Paleta de Colores */
-    --primary-color: #007bff;     
-    --secondary-color: #6c757d;   
-    --success-color: #28a745;     
-    --danger-color: #dc3545;      
-    --background-light: #f8f9fa;  
-    --text-dark: #212529;         
-    --border-color: #ced4da;      
+    /* Paleta de Colores Corporativos (Material Design) */
+    --primary-color: #1a73e8;    /* Azul Inteligencia/Acciones */
+    --secondary-color: #5f6368;  /* Gris para textos secundarios y etiquetas */
+    --success-color: #137333;    /* Verde para guardado/éxito */
+    --danger-color: #d93025;     /* Rojo para salidas/alertas IA/borrar */
+    --warning-color: #fbbc04;    /* Amarillo para ubicaciones/cantidades */
+    
+    /* Fondos y Estructura */
+    --background-light: #f4f6f8; /* Gris muy claro para el fondo de la app */
+    --background-white: #ffffff; /* Blanco para tarjetas y contenedores */
+    --text-dark: #202124;        /* Casi negro para lectura cómoda */
+    --border-color: #e0e0e0;     /* Gris suave para divisores */
     
     /* Tipografía */
-    --font-title: 'Poppins', sans-serif;
-    --font-subtitle: 'Roboto', sans-serif;
-    --font-body: 'Open Sans', sans-serif;
+    --font-title: 'Poppins', system-ui, sans-serif;
+    --font-subtitle: 'Roboto', system-ui, sans-serif;
+    --font-body: 'Open Sans', system-ui, sans-serif;
 
-    /* Base REM: 1rem = 10px */
+    /* Base REM: 1rem = 10px (Truco matemático) */
     font-size: 62.5%; 
 }
 
-
-/* Reset de Box Sizing y Margen base */
+/* =======================================
+   2. RESET BÁSICO (NORMALIZACIÓN)
+   ======================================= */
 * {
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
+    box-sizing: border-box; /* Fundamental para que los bordes no rompan el ancho */
 }
 
-/* Aplicación de fuentes y tamaño base */
 html, body, #root {
-    /* Aseguramos que los contenedores principales ocupen todo el espacio */
     width: 100%; 
-    height: 100%; 
+    min-height: 100vh; /* Asegura que el fondo cubra toda la pantalla siempre */
 }
 
 body {
     font-family: var(--font-body);
-    font-size: 1.6rem; 
+    font-size: 1.6rem; /* Equivale a 16px reales */
     color: var(--text-dark);
-    /* ELIMINAMOS background-color AQUI. Ahora lo aplicará el componente, permitiendo el degradado */
+    background-color: var(--background-light);
+    -webkit-font-smoothing: antialiased; /* Hace que las fuentes se vean nítidas */
 }
 
 /* =======================================
-   2. REGLAS TIPOGRÁFICAS (No hay cambios)
+   3. REGLAS TIPOGRÁFICAS GLOBALES
    ======================================= */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--text-dark);
+}
 
-/* Títulos principales (usar en h1) */
 h1 {
     font-family: var(--font-title);
     font-size: 3.2rem; 
@@ -58,18 +65,19 @@ h1 {
     margin-bottom: 2rem;
 }
 
-/* Subtítulos de sección (usar en h2, h3) */
 h2 {
-    font-family: var(--font-subtitle);
+    font-family: var(--font-title);
     font-size: 2.4rem; 
-    color: var(--text-dark);
     margin-bottom: 1.5rem;
 }
 
-/* Párrafos y texto general */
+h3 {
+    font-family: var(--font-subtitle);
+    font-size: 1.8rem;
+}
+
 p {
     font-family: var(--font-body);
     font-size: 1.6rem; 
     line-height: 1.6;
 }
-

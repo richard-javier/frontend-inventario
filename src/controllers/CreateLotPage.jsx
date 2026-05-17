@@ -22,7 +22,7 @@ const CreateLotPage = () => {
         const res = await fetch('http://localhost:3001/api/inventario/lotes', { headers: { 'Authorization': `Bearer ${token}` } });
         if (res.ok) {
             const data = await res.json();
-            setHistorialLotes(data);
+            setHistorialLotes(Array.isArray(data) ? data : []);
         }
     } catch (error) { console.error("Error al cargar historial", error); }
   };
@@ -57,6 +57,7 @@ const CreateLotPage = () => {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
             id_producto: productoEncontrado.id_producto,
+            sku: productoEncontrado.sku, // <--- AHORA SÍ ENVIAMOS EL SKU
             marca: productoEncontrado.marca,
             cantidad_total: parseInt(cantidadTotal),
             unidades_por_mb: parseInt(undPorMB),
@@ -65,20 +66,27 @@ const CreateLotPage = () => {
             total_pallets: totalPallets
         })
       });
+      
+      // Si el servidor falla, capturamos el JSON del backend en vez de romper la pantalla
+      if (!response.ok) {
+          const errorData = await response.json();
+          return alert(`❌ ${errorData.message}`);
+      }
+
       const data = await response.json();
-      if (response.ok) {
-          setMensaje({ texto: `✅ Lote Secuencial ${data.lote_base} creado exitosamente.`, tipo: 'exito' });
-          setLotesGenerados(data); 
-          cargarHistorial(); 
-      } else { alert(data.message); }
-    } catch (error) { console.error(error); }
+      setMensaje({ texto: `✅ Lote Secuencial ${data.lote_base} creado exitosamente.`, tipo: 'exito' });
+      setLotesGenerados(data); 
+      cargarHistorial(); 
+      
+    } catch (error) { 
+        console.error(error); 
+        alert("❌ Error de red al comunicar con el servidor.");
+    }
   };
 
-  // FUNCIÓN MAESTRA DE IMPRESIÓN (Sirve para nuevos lotes y para el historial)
   const imprimirEtiquetas = (tipo, loteData = null, productoData = null) => {
     const doc = new jsPDF('l', 'mm', [100, 50]); 
     
-    // Si viene del historial usa loteData, si es nuevo usa lotesGenerados
     const cantidad = tipo === 'MB' ? (loteData ? loteData.total_mb : totalMB) : (loteData ? loteData.total_pallets : totalPallets);
     const codigoImprimir = tipo === 'MB' ? (loteData ? loteData.lote_masterbox : lotesGenerados.lote_masterbox) : (loteData ? loteData.lote_pallet : lotesGenerados.lote_pallet);
     const skuImp = productoData ? productoData.sku : productoEncontrado.sku;
@@ -92,10 +100,10 @@ const CreateLotPage = () => {
         const codigoUnicoFinal = `${codigoImprimir}${secuencialCeros}`;
         
         doc.setFontSize(11);
-        doc.setFont('', 'bold');
+        doc.setFont(undefined, 'bold');
         doc.text(`SINCOT - ETIQUETA DE ${nombreTipo}`, 50, 7, { align: 'center' });
         doc.setFontSize(6);
-        doc.setFont('', 'normal');
+        doc.setFont(undefined, 'normal');
         doc.text(`Sistema de Inventario, Control y Trazabilidad Integral`, 50, 11, { align: 'center' });
         doc.setFontSize(8);
         doc.text(`SKU: ${skuImp} | ${marcaImp}`, 50, 16, { align: 'center' });
@@ -104,10 +112,10 @@ const CreateLotPage = () => {
         for(let b=0; b<40; b+=2) { doc.line(30+b, 19, 30+b, 31); }
         
         doc.setFontSize(15); 
-        doc.setFont('', 'bold');
+        doc.setFont(undefined, 'bold');
         doc.text(codigoUnicoFinal, 50, 39, { align: 'center' });
         doc.setFontSize(8);
-        doc.setFont('', 'normal');
+        doc.setFont(undefined, 'normal');
         doc.text(`${nombreTipo} ${i} de ${cantidad}`, 50, 45, { align: 'center' });
     }
     doc.save(`Etiquetas_${nombreTipo}_${codigoImprimir}.pdf`);
@@ -224,7 +232,6 @@ const CreateLotPage = () => {
                                           {lote.estado}
                                       </span>
                                   </td>
-                                  {/* BOTONES DE REIMPRESIÓN MAGNÍFICOS */}
                                   <td style={{ padding: '12px', textAlign: 'center', display: 'flex', gap: '5px', justifyContent: 'center' }}>
                                       <button onClick={() => copiarAlPortapapeles(lote.lote_pallet)} style={{ background: loteCopiado === lote.lote_pallet ? '#34a853' : '#f1f3f4', color: loteCopiado === lote.lote_pallet ? 'white' : '#444', border: 'none', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '5px' }} title="Copiar LPN Pallet">
                                           {loteCopiado === lote.lote_pallet ? <FaCheck /> : <FaCopy />} Copiar

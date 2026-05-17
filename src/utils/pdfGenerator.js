@@ -1,10 +1,10 @@
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import autoTable from 'jspdf-autotable'; // <-- IMPORTACIÓN CORRECTA PARA VITE
 
 export const generarNotaIngresoPDF = (nota, productosRows) => {
     const doc = new jsPDF();
     
-    // Encabezado
+    // Encabezado 100% Original
     doc.setFontSize(22);
     doc.setTextColor(26, 115, 232);
     doc.setFont(undefined, 'bold');
@@ -33,15 +33,24 @@ export const generarNotaIngresoPDF = (nota, productosRows) => {
     doc.text(`Proveedor: ${nota.proveedor || 'No especificado'}`, 14, 50);
     doc.text(`Orden de Compra: ${nota.ordenCompra || 'N/A'}`, 14, 58);
     
-    doc.text(`Proviene de: ${nota.provieneDe}`, 110, 42);
+    doc.text(`Proviene de: ${nota.provieneDe || 'N/A'}`, 110, 42);
     doc.text(`Placa Vehículo: ${nota.placaVehiculo || 'N/A'}`, 110, 50);
-    doc.text(`Estado Mercadería: ${nota.estadoMercaderia}`, 110, 58);
-    doc.text(`Tipo Inspección: ${nota.aforo}`, 110, 66);
+    doc.text(`Estado Mercadería: ${nota.estadoMercaderia || 'N/A'}`, 110, 58);
+    doc.text(`Tipo Inspección: ${nota.aforo || 'N/A'}`, 110, 66);
 
     // Tabla
     const columns = ["Pérdida", "Recibida", "Pendiente", "Descripción del Equipo", "Guía / Secuencial"];
-    const rows = productosRows.map(p => [ p.perdida, p.recibida, p.pendiente, p.descripcion || 'Sin descripción', p.guia ]);
+    const rows = productosRows.map(p => [ 
+        p.perdida, 
+        p.recibida, 
+        p.pendiente, 
+        p.descripcion || p.nombre_producto || 'Sin descripción', 
+        p.guia || nota.secuencial 
+    ]);
 
+    // ==========================================
+    // AQUÍ ESTÁ LA CORRECCIÓN: autoTable(doc) 
+    // ==========================================
     autoTable(doc, {
         startY: 75,
         head: [columns],
@@ -57,8 +66,8 @@ export const generarNotaIngresoPDF = (nota, productosRows) => {
         }
     });
 
-    // Observaciones
-    const finalY = doc.lastAutoTable.finalY || 75;
+    // Observaciones (usamos doc.lastAutoTable de forma segura)
+    const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY : 75;
     doc.setFontSize(10);
     doc.setFont(undefined, 'bold');
     doc.text("Observaciones:", 14, finalY + 12);
@@ -74,19 +83,25 @@ export const generarNotaIngresoPDF = (nota, productosRows) => {
     doc.setFont(undefined, 'bold');
     doc.text("Entregado por:", 60, firmaY + 5, { align: 'center' });
     doc.setFont(undefined, 'normal');
-    doc.text(nota.entregadoPor.nombre || "______________________", 60, firmaY + 11, { align: 'center' });
-    doc.text(nota.entregadoPor.cargo || "", 60, firmaY + 16, { align: 'center' });
+    
+    const nombreEntrega = nota.entregadoPor?.nombre || nota.entregado_por || "______________________";
+    const cargoEntrega = nota.entregadoPor?.cargo || "";
+    doc.text(nombreEntrega, 60, firmaY + 11, { align: 'center' });
+    doc.text(cargoEntrega, 60, firmaY + 16, { align: 'center' });
 
     doc.line(120, firmaY, 180, firmaY);
     doc.setFont(undefined, 'bold');
     doc.text("Recibido por:", 150, firmaY + 5, { align: 'center' });
     doc.setFont(undefined, 'normal');
-    doc.text(nota.recibidoPor.nombre || "______________________", 150, firmaY + 11, { align: 'center' });
-    doc.text(nota.recibidoPor.cargo || "", 150, firmaY + 16, { align: 'center' });
+    
+    const nombreRecibe = nota.recibidoPor?.nombre || nota.recibido_por || "______________________";
+    const cargoRecibe = nota.recibidoPor?.cargo || "";
+    doc.text(nombreRecibe, 150, firmaY + 11, { align: 'center' });
+    doc.text(cargoRecibe, 150, firmaY + 16, { align: 'center' });
 
     doc.setFontSize(8);
     doc.setTextColor(150);
-    doc.text(`Impreso desde SINCOT • Usuario Autorizado • Fecha y Hora: ${new Date().toLocaleString()}`, 105, 285, { align: 'center' });
+    doc.text(`Impreso desde SINCOT • Archivo Histórico • Fecha y Hora: ${new Date().toLocaleString()}`, 105, 285, { align: 'center' });
 
     doc.save(`Nota_Ingreso_Bodega_${nota.secuencial}.pdf`);
 };

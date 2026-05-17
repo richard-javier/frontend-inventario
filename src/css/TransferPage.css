@@ -1,0 +1,221 @@
+/* src/css/TransferPage.css */
+
+.transfer-container {
+  padding: 25px;
+  background: #f8f9fa;
+  min-height: 100vh;
+  font-family: system-ui, sans-serif;
+}
+
+.transfer-card-main {
+  background: white;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.transfer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #f0f2f5;
+  padding-bottom: 20px;
+  margin-bottom: 25px;
+}
+
+.transfer-title {
+  color: #1a73e8;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.transfer-icon-wrapper {
+  background: #e8f0fe;
+  padding: 10px;
+  border-radius: 10px;
+  color: #1a73e8;
+}
+
+.transfer-badge {
+  background: #1a73e8;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: bold;
+}
+
+.transfer-box {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+}
+
+.transfer-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: bold;
+  font-size: 0.85rem;
+  color: #5f6368;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.transfer-input {
+    width: 100%;
+    padding: 14px;
+    border-radius: 8px;
+    border: 2px solid #dadce0;
+    font-size: 1rem;
+    outline: none;
+    box-sizing: border-box;
+    font-weight: bold;
+    color: #202124;
+    background-color: #ffffff; /* Forzamos fondo blanco */
+    appearance: auto;
+}
+
+.transfer-input:focus {
+    border-color: #1a73e8;
+}
+
+.transfer-input:disabled {
+    background: #e8eaed;
+    cursor: not-allowed;
+}
+
+/* Blindaje de UX: Forzamos que la lista desplegable sea blanca con texto oscuro */
+.transfer-input option {
+    background-color: #ffffff;
+    color: #202124;
+    font-weight: normal;
+    padding: 10px;
+}
+
+/* ZONA DE UBICACIONES */
+.transfer-location-card {
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  background: white;
+  display: flex;
+  flex-direction: column;
+}
+
+.transfer-location-header {
+  padding: 15px 20px;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #202124;
+  color: white;
+  border-radius: 10px 10px 0 0;
+}
+
+.btn-toggle-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.btn-toggle {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  transition: 0.3s;
+}
+
+.btn-toggle.active {
+  background: #1a73e8;
+  color: white;
+}
+.btn-toggle.inactive {
+  background: #f1f3f4;
+  color: #5f6368;
+}
+
+.transfer-input-yellow {
+  width: 100%;
+  padding: 15px;
+  border-radius: 8px;
+  border: 2px solid #fbbc04;
+  background: #fff9c4;
+  color: #202124;
+  font-size: 1.2rem;
+  text-align: center;
+  outline: none;
+  font-weight: bold;
+  letter-spacing: 2px;
+  box-sizing: border-box;
+}
+
+/* ESCÁNER */
+.transfer-reader-zone {
+  background: #202124;
+  padding: 25px;
+  border-radius: 12px;
+  margin-bottom: 25px;
+}
+
+.transfer-reader-input {
+  width: 100%;
+  padding: 15px 15px 15px 50px;
+  border-radius: 8px;
+  border: none;
+  font-size: 1.3rem;
+  background: white;
+  color: #202124;
+  letter-spacing: 1px;
+  box-sizing: border-box;
+}
+
+.transfer-btn-scan {
+  background: #8ab4f8;
+  color: #202124;
+  border: none;
+  padding: 0 30px;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+/* TABLA Y ETIQUETAS */
+.tag-pallet {
+  background: #fef7e0;
+  color: #b06000;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: bold;
+  font-size: 0.8rem;
+}
+.tag-masterbox {
+  background: #e8f0fe;
+  color: #1a73e8;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: bold;
+  font-size: 0.8rem;
+}
+.tag-unidad {
+  background: #e6f4ea;
+  color: #137333;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: bold;
+  font-size: 0.8rem;
+}
