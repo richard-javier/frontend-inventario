@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { FaSignOutAlt, FaTrash, FaWarehouse, FaFilePdf, FaClipboardCheck, FaBrain, FaExclamationTriangle, FaUnlockAlt, FaBarcode, FaSpinner } from 'react-icons/fa';
+import { FaSignOutAlt, FaTrash, FaWarehouse, FaFilePdf, FaClipboardCheck, FaBrain, FaExclamationTriangle, FaBarcode, FaSpinner } from 'react-icons/fa';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import '../css/OutputPage.css'; // Usamos el mismo CSS que ya tienes, no hay que cambiarlo
+import '../css/OutputPage.css'; 
 
 const OutputPage = () => {
     const [bodegas, setBodegas] = useState([]);
-    const [productos, setProductos] = useState([]); // Lo usamos internamente para simular la BD
+    const [productos, setProductos] = useState([]); 
     const [loadingInitial, setLoadingInitial] = useState(true);
     const [alertaIA, setAlertaIA] = useState(null);
 
@@ -39,7 +39,11 @@ const OutputPage = () => {
             
             if (resMaestros.ok) {
                 const dataM = await resMaestros.json();
-                if (dataM.bodegas) setBodegas(dataM.bodegas);
+                if (dataM.bodegas) {
+                    // 🛡️ FILTRO APLICADO: Excluimos la Bodega Prima (B00)
+                    const bodegasFiltradas = dataM.bodegas.filter(b => b.id !== 'B00');
+                    setBodegas(bodegasFiltradas);
+                }
             }
             if (resProd.ok) {
                 const dataProd = await resProd.json();
@@ -64,17 +68,14 @@ const OutputPage = () => {
             return alert(`❌ El código ${val} ya fue escaneado.`);
         }
 
-        // SIMULACIÓN DE INTELIGENCIA DE BASE DE DATOS:
-        // En la vida real, al escanear "PLT-001", tu backend te dice qué producto es y dónde está.
-        // Aquí tomamos un producto al azar de tu lista para simular esa búsqueda automática.
         const prodSimulado = productos.length > 0 ? productos[0] : { id_producto: 0, nombre_producto: 'Producto Genérico', sku: 'SKU-000', precio: 0 };
         
         let tipoItem = 'UNIDAD/SERIE';
-        let ubicacionAutomatica = 'A01A01'; // Si es unidad o caja, asumimos que está en el RACK
+        let ubicacionAutomatica = 'A01A01'; 
 
         if (val.startsWith('PLT-')) {
             tipoItem = 'PALLET';
-            ubicacionAutomatica = 'PA0001'; // Si es Pallet, asumimos que está en el PISO
+            ubicacionAutomatica = 'PA0001'; 
         } else if (val.startsWith('MB-')) {
             tipoItem = 'MASTERBOX';
         }
@@ -86,7 +87,7 @@ const OutputPage = () => {
             sku: prodSimulado.sku,
             codigo: val,
             tipo: tipoItem,
-            ubicacion_extraccion: ubicacionAutomatica, // ¡El sistema lo asigna solo!
+            ubicacion_extraccion: ubicacionAutomatica, 
             cantidad: 1, 
             precio: parseFloat(prodSimulado.precio_ref || prodSimulado.precio || 0)
         };
@@ -138,7 +139,6 @@ const OutputPage = () => {
         } catch (error) { alert("Error de red al conectar con el servidor."); }
     };
 
-    // EL GENERADOR DE PDF SE MANTIENE EXACTAMENTE IGUAL
     const generarPDFSalida = (infoCabecera, bodegaOG, items) => {
         const doc = new jsPDF();
         const fechaActual = new Date().toLocaleString('es-EC');
