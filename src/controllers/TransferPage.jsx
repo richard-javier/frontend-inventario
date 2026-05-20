@@ -88,8 +88,14 @@ const TransferPage = () => {
   const handleTransferirTodo = async () => {
       if (listaTransferencia.length === 0) return;
 
-      const ubicacionValida = ubicacionesLibres.find(u => u.id_ubicacion === ubicacionDestino && u.tipo === estrategia);
-      if (!ubicacionValida) return alert("❌ La ubicación de destino no es válida o está ocupada.");
+      // CORRECCIÓN: Separamos el string para comparar solo el estante
+      const ubicacionValida = ubicacionesLibres.find(u => 
+          u.id_ubicacion.split('-')[1] === ubicacionDestino && 
+          u.tipo === estrategia &&
+          u.id_bodega === bodegaDestino
+      );
+      
+      if (!ubicacionValida) return alert("❌ La ubicación de destino no es válida, está ocupada o pertenece a otra bodega.");
 
       const confirmacion = window.confirm(`¿Confirmar transferencia de ${listaTransferencia.length} elementos hacia [${bodegaDestino}] en ubicación [${ubicacionDestino}]?`);
       if (!confirmacion) return;
@@ -97,7 +103,7 @@ const TransferPage = () => {
       const payload = {
           bodega_origen: bodegaOrigen,
           bodega_destino: bodegaDestino,
-          ubicacion_destino: ubicacionDestino,
+          ubicacion_destino: ubicacionValida.id_ubicacion, // SE ENVÍA COMPLETO AL BACKEND
           items: listaTransferencia
       };
 
@@ -127,7 +133,6 @@ const TransferPage = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                 <div className="transfer-box">
                     <label className="transfer-label"><FaWarehouse color="#1a73e8"/> Bodega Origen *</label>
-                    {/* APLICAMOS EL BLINDAJE DE COLOR DE FONDO BLANCO */}
                     <select value={bodegaOrigen} onChange={e => setBodegaOrigen(e.target.value)} className="transfer-input" style={{ backgroundColor: 'white' }}>
                         <option value="" style={{ background: 'white', color: '#202124' }}>-- Seleccione Origen --</option>
                         {bodegas.map(b => <option key={b.id} value={b.id} style={{ background: 'white', color: '#202124' }}>{b.id} - {b.descripcion}</option>)}
@@ -164,7 +169,11 @@ const TransferPage = () => {
                             disabled={!bodegaDestino}
                         />
                         <datalist id="listaUbiTransfer">
-                            {ubicacionesLibres.filter(u => u.tipo === estrategia).map(u => <option key={u.id_ubicacion} value={u.id_ubicacion} />)}
+                            {ubicacionesLibres
+                                .filter(u => u.tipo === estrategia && (!u.id_bodega || u.id_bodega === bodegaDestino))
+                                .map(u => (
+                                <option key={u.id_ubicacion} value={u.id_ubicacion.split('-')[1]} />
+                            ))}
                         </datalist>
                     </div>
                 </div>

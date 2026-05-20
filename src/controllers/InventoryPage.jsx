@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaBoxOpen, FaTrash, FaEdit, FaTimes, FaSave, FaFileInvoiceDollar, FaMapMarkerAlt, FaTag, FaSearch, FaAngleLeft, FaAngleRight, FaMicrochip, FaPowerOff, FaRecycle, FaClock, FaFilePdf, FaFileExcel } from 'react-icons/fa';
+import { FaBoxOpen, FaTrash, FaEdit, FaTimes, FaSave, FaFileInvoiceDollar, FaMapMarkerAlt, FaTag, FaSearch, FaAngleLeft, FaAngleRight, FaMicrochip, FaPowerOff, FaRecycle, FaClock, FaFilePdf, FaFileExcel, FaWarehouse } from 'react-icons/fa';
 import { exportarInventarioPDF, exportarInventarioExcel, generarPDFReposicion } from '../utils/exportReports';
 import '../css/InventoryPage.css';
 
@@ -9,14 +9,13 @@ const InventoryPage = () => {
   const [loading, setLoading] = useState(true);
   const [verSoloDescontinuados, setVerSoloDescontinuados] = useState(false);
   const [paginaActual, setPaginaActual] = useState(1);
-  const [fechaHora, setFechaHora] = useState(new Date()); // Reloj en vivo
+  const [fechaHora, setFechaHora] = useState(new Date()); 
 
   const [editingProduct, setEditingProduct] = useState(null); 
   const [replenishProduct, setReplenishProduct] = useState(null); 
   const [cantidadReponer, setCantidadReponer] = useState(1);
   const itemsPorPagina = 12;
 
-  // Actualizador del Reloj
   useEffect(() => {
     const timer = setInterval(() => setFechaHora(new Date()), 1000);
     return () => clearInterval(timer);
@@ -34,7 +33,32 @@ const InventoryPage = () => {
   useEffect(() => { fetchInventario(); }, []);
   useEffect(() => { setPaginaActual(1); }, [busqueda, verSoloDescontinuados]);
 
-  // Lógica de Estados Visuales
+  // --- LÓGICA DE EXTRACCIÓN DE BODEGA Y UBICACIÓN ---
+  const getUbicacionDetalle = (ubicacionStr) => {
+    if (!ubicacionStr || ubicacionStr === 'Por Asignar' || ubicacionStr === 'Sin Asignar') {
+        return { idBodega: '-', descBodega: 'Sin Asignar', rack: 'Por Asignar' };
+    }
+    
+    // Si la ubicación viene en formato "B01-A01A01"
+    if (ubicacionStr.includes('-')) {
+        const parts = ubicacionStr.split('-');
+        const bId = parts[0];
+        const rackFisico = parts[1];
+        
+        let bDesc = 'Bodega General';
+        if (bId === 'B00') bDesc = 'Materia prima';
+        else if (bId === 'B01') bDesc = 'Producto terminado';
+        else if (bId === 'B02') bDesc = 'Refabricado';
+        else if (bId === 'B03') bDesc = 'Devoluciones';
+        else if (bId === 'B04') bDesc = 'Dañados';
+        else if (bId === 'B05') bDesc = 'Despacho';
+
+        return { idBodega: bId, descBodega: bDesc, rack: rackFisico };
+    }
+    
+    return { idBodega: '-', descBodega: 'Bodega General', rack: ubicacionStr };
+  };
+
   const getStockStatus = (prod) => {
     const isInactive = prod.status_equipo === 'Descontinuado' || prod.estado === 'INACTIVO';
     if (isInactive) return { color: '#5f6368', bg: '#f1f3f4', label: 'DESCONTINUADO' };
@@ -46,7 +70,6 @@ const InventoryPage = () => {
     return { color: '#137333', bg: '#e6f4ea', label: 'ÓPTIMO' };
   };
 
-  // Funciones CRUD
   const handleDescontinuar = async (prod) => {
     if (Number(prod.stock_actual) > 0) return alert("⛔ No se puede descontinuar con stock físico.");
     if(!window.confirm(`¿Descontinuar:\n"${prod.nombre_producto}"?`)) return;
@@ -84,7 +107,6 @@ const InventoryPage = () => {
       setCantidadReponer(sugerido > 0 ? sugerido : 1);
   };
 
-  // Filtrado de Productos
   const productosFiltrados = productos.filter(prod => {
     const isInactive = prod.status_equipo === 'Descontinuado' || prod.estado === 'INACTIVO';
     if (verSoloDescontinuados && !isInactive) return false;
@@ -94,7 +116,8 @@ const InventoryPage = () => {
     if (!termino) return true;
     return (prod.nombre_producto || '').toLowerCase().includes(termino) || 
            (prod.sku || '').toLowerCase().includes(termino) || 
-           (prod.part_number || '').toLowerCase().includes(termino);
+           (prod.part_number || '').toLowerCase().includes(termino) ||
+           (prod.ubicacion_bodega || '').toLowerCase().includes(termino);
   });
 
   const indexUltimoItem = paginaActual * itemsPorPagina;
@@ -106,7 +129,6 @@ const InventoryPage = () => {
     <div className="inventory-container">
       <div className="inventory-card">
         
-        {/* ENCABEZADO CON RELOJ Y BOTONES NUEVOS */}
         <div className="header-section">
           <div className="title-group">
             <h2 style={{ color: verSoloDescontinuados ? '#5f6368' : '#1a73e8', display: 'flex', alignItems: 'center', gap: '10px', margin: '0' }}>
@@ -130,11 +152,10 @@ const InventoryPage = () => {
           </div>
         </div>
 
-        {/* BUSCADOR Y FILTRO */}
         <div className="filter-section">
           <div className="search-wrapper">
             <FaSearch className="search-icon" />
-            <input type="text" placeholder="Buscar por SKU, Part Number, Nombre..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="search-input" />
+            <input type="text" placeholder="Buscar por SKU, Part Number, Ubicación, Nombre..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="search-input" />
           </div>
           <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: verSoloDescontinuados ? '#3c4043' : 'white', padding: '12px 18px', borderRadius: '8px', border: '1px solid #dadce0', color: verSoloDescontinuados ? 'white' : '#3c4043', fontWeight: 'bold' }}>
               <input type="checkbox" checked={verSoloDescontinuados} onChange={(e) => setVerSoloDescontinuados(e.target.checked)} style={{ display: 'none' }} />
@@ -143,24 +164,26 @@ const InventoryPage = () => {
           </label>
         </div>
 
-        {/* TABLA DE PRODUCTOS */}
         <div className="table-container">
           <table className="custom-table">
             <thead>
               <tr>
-                <th style={{ width: '20%' }}>Identificación</th>
-                <th style={{ width: '35%' }}>Detalle del Equipo</th>
-                <th style={{ width: '10%' }}>Precio Ref.</th>
-                <th style={{ width: '15%', textAlign: 'center' }}>Stock Físico</th>
-                <th style={{ width: '20%', textAlign: 'center' }}>Acciones</th>
+                <th style={{ width: '13%' }}>Identificación</th>
+                <th style={{ width: '25%' }}>Detalle del Equipo</th>
+                <th style={{ width: '15%' }}>Bodega</th>
+                <th style={{ width: '10%' }}>Ubicación</th>
+                <th style={{ width: '9%' }}>Precio Ref.</th>
+                <th style={{ width: '12%', textAlign: 'center' }}>Stock Físico</th>
+                <th style={{ width: '16%', textAlign: 'center' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {loading ? ( <tr><td colSpan="5" style={{ padding: '40px', textAlign: 'center', color: '#1a73e8', fontWeight: 'bold' }}>Cargando catálogo inteligente...</td></tr> ) : 
+              {loading ? ( <tr><td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: '#1a73e8', fontWeight: 'bold' }}>Cargando catálogo inteligente...</td></tr> ) : 
                itemsActuales.length > 0 ? (
                 itemsActuales.map((prod) => {
                 const status = getStockStatus(prod);
                 const isInactive = prod.status_equipo === 'Descontinuado' || prod.estado === 'INACTIVO';
+                const ubi = getUbicacionDetalle(prod.ubicacion_bodega);
 
                 return (
                   <tr key={prod.id_producto} style={{ opacity: isInactive ? 0.8 : 1 }}>
@@ -172,9 +195,25 @@ const InventoryPage = () => {
                       <div style={{ fontWeight: '600', color: isInactive ? '#80868b' : '#202124', fontSize: '0.95rem', textDecoration: isInactive ? 'line-through' : 'none' }}>{prod.nombre_producto}</div>
                       <div style={{ fontSize: '0.8rem', color: '#80868b' }}>{prod.tipo_producto || 'Sin Cat.'} • {prod.marca}</div>
                     </td>
+                    
+                    {/* NUEVA COLUMNA DE BODEGA */}
+                    <td>
+                      <div style={{ fontWeight: 'bold', color: '#1a73e8', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <FaWarehouse size="0.8em"/> {ubi.idBodega}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#5f6368', textTransform: 'uppercase' }}>{ubi.descBodega}</div>
+                    </td>
+
+                    {/* NUEVA COLUMNA DE UBICACIÓN FÍSICA */}
+                    <td>
+                        <div style={{ background: ubi.rack === 'Por Asignar' ? '#f1f3f4' : '#fef7e0', color: ubi.rack === 'Por Asignar' ? '#5f6368' : '#b06000', padding: '4px 8px', borderRadius: '4px', border: `1px solid ${ubi.rack === 'Por Asignar' ? '#dadce0' : '#fbbc04'}`, display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem', fontWeight: 'bold' }}>
+                            <FaMapMarkerAlt /> {ubi.rack}
+                        </div>
+                    </td>
+
                     <td style={{ fontWeight: '600', color: isInactive ? '#80868b' : '#137333' }}>${prod.precio || '0.00'}</td>
                     <td style={{ textAlign: 'center' }}>
-                      <div style={{ background: status.bg, color: status.color, padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.8rem', display: 'inline-block', border: `1px solid ${status.color}40` }}>
+                      <div style={{ background: status.bg, color: status.color, padding: '6px 10px', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.8rem', display: 'inline-block', border: `1px solid ${status.color}40` }}>
                         {prod.stock_actual} Uds. • {status.label}
                       </div>
                     </td>
@@ -186,9 +225,9 @@ const InventoryPage = () => {
                           </button>
                         ) : (
                           <>
-                            <button onClick={() => abrirModalReposicion(prod)} style={{ background: '#fff', color: '#ea4335', border: '1px solid #ea4335', padding: '8px 10px', borderRadius: '6px', cursor: 'pointer' }}><FaFileInvoiceDollar /></button>
-                            <button onClick={() => setEditingProduct(prod)} style={{ background: '#fff', color: '#1a73e8', border: '1px solid #1a73e8', padding: '8px 10px', borderRadius: '6px', cursor: 'pointer' }}><FaEdit /></button>
-                            <button onClick={() => handleDescontinuar(prod)} disabled={Number(prod.stock_actual) > 0} style={{ background: 'none', border: 'none', color: Number(prod.stock_actual) > 0 ? '#dadce0' : '#5f6368', cursor: Number(prod.stock_actual) > 0 ? 'not-allowed' : 'pointer' }}><FaPowerOff /></button>
+                            <button onClick={() => abrirModalReposicion(prod)} title="Orden de Reposición" style={{ background: '#fff', color: '#ea4335', border: '1px solid #ea4335', padding: '6px 8px', borderRadius: '6px', cursor: 'pointer' }}><FaFileInvoiceDollar /></button>
+                            <button onClick={() => setEditingProduct(prod)} title="Editar Stock" style={{ background: '#fff', color: '#1a73e8', border: '1px solid #1a73e8', padding: '6px 8px', borderRadius: '6px', cursor: 'pointer' }}><FaEdit /></button>
+                            <button onClick={() => handleDescontinuar(prod)} title="Descontinuar" disabled={Number(prod.stock_actual) > 0} style={{ background: 'none', border: 'none', color: Number(prod.stock_actual) > 0 ? '#dadce0' : '#5f6368', cursor: Number(prod.stock_actual) > 0 ? 'not-allowed' : 'pointer' }}><FaPowerOff /></button>
                           </>
                         )}
                       </div>
@@ -197,27 +236,25 @@ const InventoryPage = () => {
                 );
                })
               ) : (
-                <tr><td colSpan="5" style={{ padding: '40px', textAlign: 'center', color:'#80868b' }}>No se encontraron coincidencias.</td></tr>
+                <tr><td colSpan="7" style={{ padding: '40px', textAlign: 'center', color:'#80868b' }}>No se encontraron coincidencias.</td></tr>
               )}
             </tbody>
           </table>
         </div>
 
-        {/* PAGINACIÓN */}
         {totalPaginas > 1 && (
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px' }}>
             <span style={{ color: '#5f6368', fontSize: '0.9rem' }}>Mostrando {indexPrimerItem + 1} a {Math.min(indexUltimoItem, productosFiltrados.length)} de {productosFiltrados.length}</span>
             <div style={{ display: 'flex', gap: '5px' }}>
-              <button onClick={() => setPaginaActual(paginaActual - 1)} disabled={paginaActual === 1} style={{ padding: '8px 12px', cursor: paginaActual === 1 ? 'not-allowed' : 'pointer' }}><FaAngleLeft /></button>
+              <button onClick={() => setPaginaActual(paginaActual - 1)} disabled={paginaActual === 1} style={{ padding: '8px 12px', cursor: paginaActual === 1 ? 'not-allowed' : 'pointer', background: 'white', border: '1px solid #ddd', borderRadius: '4px' }}><FaAngleLeft /></button>
               <span style={{ padding: '8px', color: '#1a73e8', fontWeight: 'bold' }}>{paginaActual} / {totalPaginas}</span>
-              <button onClick={() => setPaginaActual(paginaActual + 1)} disabled={paginaActual === totalPaginas} style={{ padding: '8px 12px', cursor: paginaActual === totalPaginas ? 'not-allowed' : 'pointer' }}><FaAngleRight /></button>
+              <button onClick={() => setPaginaActual(paginaActual + 1)} disabled={paginaActual === totalPaginas} style={{ padding: '8px 12px', cursor: paginaActual === totalPaginas ? 'not-allowed' : 'pointer', background: 'white', border: '1px solid #ddd', borderRadius: '4px' }}><FaAngleRight /></button>
             </div>
           </div>
         )}
 
       </div>
 
-      {/* MODAL EDITAR */}
       {editingProduct && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -236,7 +273,6 @@ const InventoryPage = () => {
         </div>
       )}
 
-      {/* MODAL REPOSICIÓN */}
       {replenishProduct && (
         <div className="modal-overlay">
           <div className="modal-content">

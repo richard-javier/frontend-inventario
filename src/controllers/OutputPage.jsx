@@ -40,7 +40,6 @@ const OutputPage = () => {
             if (resMaestros.ok) {
                 const dataM = await resMaestros.json();
                 if (dataM.bodegas) {
-                    // 🛡️ FILTRO APLICADO: Excluimos la Bodega Prima (B00)
                     const bodegasFiltradas = dataM.bodegas.filter(b => b.id !== 'B00');
                     setBodegas(bodegasFiltradas);
                 }
@@ -55,7 +54,7 @@ const OutputPage = () => {
 
     useEffect(() => { cargarDatos(); }, []);
 
-    // --- LÓGICA DE ESCANEO AUTOMÁTICO ---
+    // --- LÓGICA DE ESCANEO AUTOMÁTICO CORREGIDA ---
     const handleScan = (e) => {
         e.preventDefault();
         const val = escaneo.trim().toUpperCase();
@@ -68,14 +67,23 @@ const OutputPage = () => {
             return alert(`❌ El código ${val} ya fue escaneado.`);
         }
 
-        const prodSimulado = productos.length > 0 ? productos[0] : { id_producto: 0, nombre_producto: 'Producto Genérico', sku: 'SKU-000', precio: 0 };
+        // 🛡️ CORRECCIÓN: Buscamos un producto que SÍ esté en la bodega origen para simular correctamente
+        const productoEnBodega = productos.find(p => p.ubicacion_bodega && p.ubicacion_bodega.startsWith(bodegaOrigen));
+        const prodSimulado = productoEnBodega || (productos.length > 0 ? productos[0] : { id_producto: 0, nombre_producto: 'Producto Genérico', sku: 'SKU-000', precio: 0, ubicacion_bodega: 'Por Asignar' });
         
         let tipoItem = 'UNIDAD/SERIE';
-        let ubicacionAutomatica = 'A01A01'; 
+        
+        // 🛡️ CORRECCIÓN: Limpiamos la ubicación para que se vea elegante en pantalla
+        let ubicacionLimpia = 'Sin Asignar';
+        if (prodSimulado.ubicacion_bodega && prodSimulado.ubicacion_bodega !== 'Por Asignar') {
+            // Si viene como B01-A01A01, lo cortamos para que solo diga A01A01
+            ubicacionLimpia = prodSimulado.ubicacion_bodega.includes('-') 
+                ? prodSimulado.ubicacion_bodega.split('-')[1] 
+                : prodSimulado.ubicacion_bodega;
+        }
 
         if (val.startsWith('PLT-')) {
             tipoItem = 'PALLET';
-            ubicacionAutomatica = 'PA0001'; 
         } else if (val.startsWith('MB-')) {
             tipoItem = 'MASTERBOX';
         }
@@ -87,7 +95,7 @@ const OutputPage = () => {
             sku: prodSimulado.sku,
             codigo: val,
             tipo: tipoItem,
-            ubicacion_extraccion: ubicacionAutomatica, 
+            ubicacion_extraccion: ubicacionLimpia, // ¡Ahora dirá A01A01 de forma limpia!
             cantidad: 1, 
             precio: parseFloat(prodSimulado.precio_ref || prodSimulado.precio || 0)
         };

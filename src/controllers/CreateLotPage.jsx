@@ -40,6 +40,7 @@ const CreateLotPage = () => {
           setProductoEncontrado(encontrado);
           setLotesGenerados(null);
           setCantidadTotal(''); setUndPorMB(''); setUndPorPallet('');
+          setMensaje({ texto: '', tipo: '' });
       } else { alert("❌ Producto no encontrado."); }
     } catch (error) { console.error(error); }
   };
@@ -48,7 +49,28 @@ const CreateLotPage = () => {
   const totalPallets = (cantidadTotal && undPorPallet) ? Math.ceil(cantidadTotal / undPorPallet) : 0;
 
   const handleGenerarLote = async () => {
-    if (!cantidadTotal || !undPorMB || !undPorPallet) return alert("Complete todas las cantidades.");
+    // 1. Validación de campos vacíos
+    if (!cantidadTotal || !undPorMB || !undPorPallet) return alert("⚠️ Complete todas las cantidades.");
+    
+    // 2. VALIDACIÓN MATEMÁTICA ESTRICTA (Prevención de Error Humano)
+    const cantTotalNum = parseInt(cantidadTotal);
+    const undPorMBNum = parseInt(undPorMB);
+    const undPorPalletNum = parseInt(undPorPallet);
+
+    if (cantTotalNum <= 0 || undPorMBNum <= 0 || undPorPalletNum <= 0) {
+        return alert("❌ Lógica Inválida: Las cantidades deben ser mayores a cero.");
+    }
+    if (undPorMBNum > cantTotalNum) {
+        return alert(`❌ Lógica Inválida: Una caja Master (${undPorMBNum} uds) no puede contener más unidades que el arribo total (${cantTotalNum} uds).`);
+    }
+    if (undPorPalletNum < undPorMBNum) {
+        return alert(`❌ Lógica Inválida: Un Pallet entero (${undPorPalletNum} uds) no puede tener menos capacidad que una sola caja Master (${undPorMBNum} uds).`);
+    }
+    if (undPorPalletNum === 1 && cantTotalNum > 1) {
+        const confirmar = window.confirm(`⚠️ ADVERTENCIA: Has indicado que cada pallet llevará 1 sola unidad. Esto generará ${cantTotalNum} pallets distintos. ¿Estás seguro de que esto es correcto? (Si quieres 1 solo pallet con todo el producto, cancela y pon ${cantTotalNum} en Unidades por Pallet)`);
+        if (!confirmar) return;
+    }
+
     const token = localStorage.getItem('token');
     
     try {
@@ -57,17 +79,16 @@ const CreateLotPage = () => {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
             id_producto: productoEncontrado.id_producto,
-            sku: productoEncontrado.sku, // <--- AHORA SÍ ENVIAMOS EL SKU
+            sku: productoEncontrado.sku,
             marca: productoEncontrado.marca,
-            cantidad_total: parseInt(cantidadTotal),
-            unidades_por_mb: parseInt(undPorMB),
+            cantidad_total: cantTotalNum,
+            unidades_por_mb: undPorMBNum,
             total_mb: totalMB,
-            unidades_por_pallet: parseInt(undPorPallet),
+            unidades_por_pallet: undPorPalletNum,
             total_pallets: totalPallets
         })
       });
       
-      // Si el servidor falla, capturamos el JSON del backend en vez de romper la pantalla
       if (!response.ok) {
           const errorData = await response.json();
           return alert(`❌ ${errorData.message}`);
@@ -142,7 +163,7 @@ const CreateLotPage = () => {
       <form onSubmit={handleBuscar} style={{ display: 'flex', gap: '10px', marginBottom: '30px' }}>
           <div style={{ position: 'relative', flex: 1 }}>
               <FaSearch style={{ position: 'absolute', left: '15px', top: '15px', color: '#1a73e8' }} />
-              <input type="text" value={terminoBusqueda} onChange={e => setTerminoBusqueda(e.target.value)} style={{...inputStyle, paddingLeft: '40px', marginTop: 0, textAlign: 'left', fontWeight:'normal'}} placeholder="Escanee SKU del producto a importar..." />
+              <input type="text" value={terminoBusqueda} onChange={e => setTerminoBusqueda(e.target.value)} style={{...inputStyle, paddingLeft: '40px', marginTop: 0, textAlign: 'left', fontWeight:'normal'}} placeholder="Escanee SKU del equipo o producto..." />
           </div>
           <button type="submit" style={{background:'#1a73e8', color:'white', border:'none', padding:'0 30px', borderRadius:'6px', fontWeight:'bold', cursor:'pointer'}}>BUSCAR</button>
       </form>
@@ -165,7 +186,7 @@ const CreateLotPage = () => {
               <div style={{...cardStyle, borderTop: '4px solid #fbbc04'}}>
                   <FaBoxes size="1.5em" color="#fbbc04" />
                   <h4 style={{ margin: '5px 0 10px 0', color: '#333' }}>Agrupación Master Box</h4>
-                  <label style={{fontSize:'0.8rem'}}>Unidades por Caja (MB):</label>
+                  <label style={{fontSize:'0.8rem'}}>Unidades que caben en 1 Caja:</label>
                   <input type="number" min="1" value={undPorMB} onKeyDown={blockInvalidChars} onChange={e => setUndPorMB(e.target.value)} style={inputStyle} placeholder="0" />
                   <div style={{ marginTop: '15px', fontSize: '1.2rem', color: '#555' }}>Total Cajas: <strong style={{color:'#000'}}>{totalMB} MB</strong></div>
                   {lotesGenerados && (
@@ -176,7 +197,7 @@ const CreateLotPage = () => {
               <div style={{...cardStyle, borderTop: '4px solid #34a853'}}>
                   <FaPallet size="1.5em" color="#34a853" />
                   <h4 style={{ margin: '5px 0 10px 0', color: '#333' }}>Agrupación Pallet</h4>
-                  <label style={{fontSize:'0.8rem'}}>Unidades por Pallet:</label>
+                  <label style={{fontSize:'0.8rem'}}>Unidades que caben en 1 Pallet:</label>
                   <input type="number" min="1" value={undPorPallet} onKeyDown={blockInvalidChars} onChange={e => setUndPorPallet(e.target.value)} style={inputStyle} placeholder="0" />
                   <div style={{ marginTop: '15px', fontSize: '1.2rem', color: '#555' }}>Total Pallets: <strong style={{color:'#000'}}>{totalPallets} PLT</strong></div>
                   {lotesGenerados && (

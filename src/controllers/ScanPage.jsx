@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaBarcode, FaWarehouse, FaMicrochip, FaBoxOpen, FaPallet, FaCheckCircle, FaSpinner, FaTimesCircle, FaSave, FaExclamationTriangle, FaMapMarkerAlt, FaBars, FaLayerGroup, FaSearch, FaBox } from 'react-icons/fa';
+import { FaBarcode, FaWarehouse, FaMicrochip, FaBoxOpen, FaPallet, FaCheckCircle, FaSpinner, FaMapMarkerAlt, FaBars, FaLayerGroup, FaSearch } from 'react-icons/fa';
 import '../css/ScanPage.css';
 
 const ScanPage = () => {
@@ -8,10 +8,9 @@ const ScanPage = () => {
   const [productos, setProductos] = useState([]);
   const [loadingInitial, setLoadingInitial] = useState(true);
 
-  // ESTADOS DE TRAZABILIDAD (Igual al Ingreso)
   const [bodegaOrigen, setBodegaOrigen] = useState('B00'); 
   const [bodegaDestino, setBodegaDestino] = useState('');
-  const [estrategia, setEstrategia] = useState('RACK'); // RACK o PISO
+  const [estrategia, setEstrategia] = useState('RACK');
   const [ubicacionDestino, setUbicacionDestino] = useState('');
   
   const [productoSelect, setProductoSelect] = useState('');
@@ -36,7 +35,6 @@ const ScanPage = () => {
       if (resMaestros.ok) {
           const dataM = await resMaestros.json();
           if (dataM.bodegas) setBodegas(dataM.bodegas);
-          // Cargamos ubicaciones libres igual que en el Ingreso
           if (dataM.ubicaciones) {
               setUbicacionesLibres(dataM.ubicaciones.filter(u => u.estado === 'LIBRE'));
           }
@@ -109,18 +107,33 @@ const ScanPage = () => {
   const handleGuardarSerializacion = async () => {
       if (totalSeriales === 0) return;
       
-      // Validación de ubicación (Igual al Ingreso)
-      const ubicacionValida = ubicacionesLibres.find(u => u.id_ubicacion === ubicacionDestino && u.tipo === estrategia);
-      if (!ubicacionValida) return alert("❌ La ubicación no es válida o no pertenece a la estrategia seleccionada.");
+      // CORRECCIÓN: Separamos el string visual de la base de datos
+      const ubicacionValida = ubicacionesLibres.find(u => 
+          u.id_ubicacion.split('-')[1] === ubicacionDestino && 
+          u.tipo === estrategia &&
+          u.id_bodega === bodegaDestino
+      );
+      
+      if (!ubicacionValida) return alert("❌ La ubicación no es válida, pertenece a otra bodega o no es de la estrategia seleccionada.");
 
       const confirmacion = window.confirm(`Se moverán ${totalSeriales} equipos a [${bodegaDestino}] ubicación [${ubicacionDestino}]. ¿Confirmar?`);
       if (!confirmacion) return;
 
-      console.log("Payload:", { bodegaOrigen, bodegaDestino, ubicacionDestino, totalSeriales, arbolEscaneo });
+      console.log("Payload:", { 
+          bodegaOrigen, 
+          bodegaDestino, 
+          ubicacionDestino: ubicacionValida.id_ubicacion, // SE ENVÍA COMPLETO AL BACKEND
+          totalSeriales, 
+          arbolEscaneo 
+      });
+
       alert("✅ ¡Producción registrada y Transferencia completada!");
       
+      // 🛡️ CORRECCIÓN: Borrar el producto de la lista para que no vuelva a salir
+      setProductos(prevProductos => prevProductos.filter(p => p.id_producto.toString() !== productoSelect));
+
       setArbolEscaneo({}); setActivePallet(null); setActiveMB(null); setTotalSeriales(0); setProductoSelect(''); setUbicacionDestino('');
-      await cargarDatos(); // Recargar ubicaciones
+      await cargarDatos(); 
   };
 
   if (loadingInitial) return <div style={{textAlign:'center', padding:'50px'}}><FaSpinner className="fa-spin" size="2em" color="#1a73e8" /><p>Cargando WMS...</p></div>;
@@ -134,10 +147,8 @@ const ScanPage = () => {
           Producción: Serializado y Transferencia
         </h2>
 
-        {/* --- GRID DE TRAZABILIDAD (ESTILO INGRESO) --- */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px', marginBottom: '30px' }}>
             
-            {/* IZQUIERDA: BODEGAS */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                 <div className="scan-box-disabled">
                     <label className="scan-label"><FaWarehouse/> Bodega Origen</label>
@@ -152,7 +163,6 @@ const ScanPage = () => {
                 </div>
             </div>
 
-            {/* DERECHA: UBICACIONES (Sincronizado con Ingreso) */}
             <div className="scan-box-white">
                 <div style={{ padding: '15px 20px', borderBottom: '2px solid #f0f2f5', display: 'flex', alignItems: 'center', gap: '10px', background: '#202124', color: 'white' }}>
                     <FaMapMarkerAlt color="#fbbc04" /> <span style={{ fontWeight: 'bold' }}>Ubicaciones de Destino</span>
@@ -179,8 +189,10 @@ const ScanPage = () => {
                             disabled={!bodegaDestino}
                         />
                         <datalist id="listaUbiScan">
-                            {ubicacionesLibres.filter(u => u.tipo === estrategia).map(u => (
-                                <option key={u.id_ubicacion} value={u.id_ubicacion} />
+                            {ubicacionesLibres
+                                .filter(u => u.tipo === estrategia && (!u.id_bodega || u.id_bodega === bodegaDestino))
+                                .map(u => (
+                                <option key={u.id_ubicacion} value={u.id_ubicacion.split('-')[1]} />
                             ))}
                         </datalist>
                     </div>
@@ -188,7 +200,6 @@ const ScanPage = () => {
             </div>
         </div>
 
-        {/* --- PRODUCTO Y ESCÁNER --- */}
         <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '20px', marginBottom: '20px' }}>
             <div className="scan-box-disabled" style={{background: 'white'}}>
                 <label className="scan-label"><FaMicrochip/> Producto a Serializar *</label>
@@ -216,7 +227,6 @@ const ScanPage = () => {
             </form>
         </div>
 
-        {/* ÁRBOL DE SERIALIZACIÓN (EL CONTENEDOR QUE YA TENÍAS) */}
         <div className="tree-container" style={{ border: '2px solid #e0e0e0', borderRadius: '12px', minHeight: '200px', background: '#fafafa' }}>
             <div style={{ background: '#f1f3f4', padding: '15px', borderRadius: '10px 10px 0 0', borderBottom: '2px solid #e0e0e0', display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ fontWeight: 'bold', color: '#5f6368' }}>ÁRBOL DE CARGA</span>

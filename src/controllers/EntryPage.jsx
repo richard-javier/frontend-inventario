@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaTruck, FaWarehouse, FaBox, FaCheckCircle, FaSpinner, FaSearch, FaTimesCircle, FaMapMarkerAlt, FaPallet, FaLayerGroup, FaBars } from 'react-icons/fa';
+import { FaTruck, FaWarehouse, FaBox, FaCheckCircle, FaSpinner, FaSearch, FaMapMarkerAlt, FaPallet, FaLayerGroup, FaBars } from 'react-icons/fa';
 
 const EntryPage = () => {
   const [bodegas, setBodegas] = useState([]);
@@ -11,8 +11,6 @@ const EntryPage = () => {
   const [loteEscaneado, setLoteEscaneado] = useState('');
   const [loteSeleccionado, setLoteSeleccionado] = useState(null); 
 
-  // --- ESTRATEGIA Y ASIGNACIÓN SIMPLIFICADA ---
-  // Mantenemos 'RACK' y 'PISO' internamente para que funcione con la Base de Datos
   const [estrategia, setEstrategia] = useState('RACK'); 
   const [selUbicacion, setSelUbicacion] = useState(''); 
 
@@ -29,7 +27,6 @@ const EntryPage = () => {
       if (resMaestros.ok) {
           const dataMaestros = await resMaestros.json();
           if (dataMaestros.bodegas) setBodegas(dataMaestros.bodegas);
-          // Filtramos para asegurar que el frontend solo tenga en memoria las LIBRES
           if (dataMaestros.ubicaciones) {
               setUbicacionesLibres(dataMaestros.ubicaciones.filter(u => u.estado === 'LIBRE'));
           }
@@ -60,7 +57,7 @@ const EntryPage = () => {
         }
 
         setLoteSeleccionado({ ...lote, cantidad_ingresar: cantidadReal, pallet_actual: ingresados + 1 }); 
-        setSelUbicacion(''); // Reset ubicación
+        setSelUbicacion(''); 
         setEstrategia('RACK');
     } else { 
         alert("❌ Lote o Pallet no encontrado en planificaciones pendientes."); 
@@ -70,22 +67,25 @@ const EntryPage = () => {
   const handleGuardarIngresoFormalSincot = async () => {
     if (!loteSeleccionado) return;
     
-    // Validamos que el operario haya elegido una ubicación del combo
     if (!selUbicacion) return alert("⚠️ Debe escribir o seleccionar una ubicación disponible.");
 
-    // Validamos que la ubicación escrita realmente exista y esté libre (por si la escribe a mano)
-    const ubicacionValida = ubicacionesLibres.find(u => u.id_ubicacion === selUbicacion && u.tipo === estrategia);
-    if (!ubicacionValida) return alert("❌ La ubicación ingresada no es válida, no pertenece a esta estrategia o ya está ocupada.");
+    // CORRECCIÓN: Separamos el string para comparar visual vs base de datos
+    const ubicacionValida = ubicacionesLibres.find(u => 
+        u.id_ubicacion.split('-')[1] === selUbicacion && 
+        u.tipo === estrategia &&
+        u.id_bodega === cabecera.id_bodega 
+    );
+    
+    if (!ubicacionValida) return alert("❌ La ubicación ingresada no es válida, pertenece a otra bodega o ya está ocupada.");
 
     const token = localStorage.getItem('token');
     
-    // Eliminamos tipo_asignacion, el backend lo manejará automáticamente
     const itemRecibido = {
         id_lote_planificado: loteSeleccionado.id_lote,
         id_producto: loteSeleccionado.id_producto,
         cantidad_ingresar: loteSeleccionado.cantidad_ingresar,
         costo_unitario: loteSeleccionado.costo_unitario || null, 
-        id_ubicacion: selUbicacion
+        id_ubicacion: ubicacionValida.id_ubicacion // ENVIAMOS EL ID COMPLETO (Ej. B00-A01A01)
     };
 
     try {
@@ -96,10 +96,8 @@ const EntryPage = () => {
       
       if (response.ok) {
         setMensaje({ texto: `✅ ¡Pallet asegurado en la ubicación ${selUbicacion}!`, tipo: 'exito' });
-        
         setLoteSeleccionado(null); setLoteEscaneado(''); setSelUbicacion('');
-        
-        await cargarDatosSincot(); // Recarga y quita la ubicación ocupada de la lista
+        await cargarDatosSincot(); 
         setTimeout(() => setMensaje({ texto: '', tipo: '' }), 4000);
       } else {
         alert("❌ Ocurrió un error al procesar el ingreso.");
@@ -109,7 +107,6 @@ const EntryPage = () => {
     }
   };
 
-  // ESTILOS
   const inputStyle = { width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid #1a73e8', fontSize: '1.1rem', marginTop: '6px', outline: 'none', fontWeight: 'bold', color: '#202124' };
   const labelStyle = { display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold', fontSize: '0.8rem', color: '#5f6368', textTransform: 'uppercase', letterSpacing: '0.5px' };
   const toggleBtnStyle = (active) => ({ flex: 1, padding: '15px', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '1rem', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', transition: 'all 0.2s', background: active ? '#1a73e8' : '#f1f3f4', color: active ? 'white' : '#5f6368', boxShadow: active ? '0 4px 6px rgba(26,115,232,0.2)' : 'none' });
@@ -140,7 +137,6 @@ const EntryPage = () => {
             <form onSubmit={handleBuscarLoteSincot} style={{ display: 'flex', gap: '10px' }}>
                 <div style={{ position: 'relative', flex: 1 }}>
                     <FaSearch style={{ position: 'absolute', left: '16px', top: '16px', color: '#8ab4f8' }} />
-                    {/* AQUI ESTÁ EL CAMBIO DE COLOR: Fondo oscuro, texto blanco */}
                     <input 
                       type="text" 
                       value={loteEscaneado} 
@@ -185,7 +181,6 @@ const EntryPage = () => {
                         </button>
                     </div>
 
-                    {/* COMBO BUSCADOR ÚNICO DE UBICACIONES */}
                     <div style={{ background: '#f8f9fa', padding: '25px', borderRadius: '12px', marginBottom: '25px', border: '1px solid #e0e0e0', display: 'flex', justifyContent: 'center' }}>
                         <div style={{ width: '100%', maxWidth: '500px' }}>
                             <label style={{...labelStyle, marginBottom: '10px'}}>Asignar Ubicación Física (Disponibles)</label>
@@ -199,8 +194,10 @@ const EntryPage = () => {
                             />
                             
                             <datalist id="listaUbicaciones">
-                                {ubicacionesLibres.filter(u => u.tipo === estrategia).map(u => (
-                                    <option key={u.id_ubicacion} value={u.id_ubicacion} />
+                                {ubicacionesLibres
+                                    .filter(u => u.tipo === estrategia && (!u.id_bodega || u.id_bodega === cabecera.id_bodega))
+                                    .map(u => (
+                                    <option key={u.id_ubicacion} value={u.id_ubicacion.split('-')[1]} />
                                 ))}
                             </datalist>
                             <p style={{ textAlign: 'center', color: '#80868b', fontSize: '0.85rem', marginTop: '10px' }}>Escriba o seleccione una ubicación de la lista. Las ubicaciones ocupadas no se muestran.</p>
