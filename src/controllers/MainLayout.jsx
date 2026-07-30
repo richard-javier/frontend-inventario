@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
+import { API_BASE } from '../config/api.js';
 import { useNavigate, useLocation } from "react-router-dom";
-import { FaExchangeAlt, FaBrain, FaTags, FaClipboardList, FaFileSignature, FaBarcode, FaChartLine, FaSignOutAlt, FaUserCircle, FaTruckLoading, FaWarehouse, FaSearch, FaCubes, FaFileExport, FaChartPie, FaTh, FaBoxes, FaCogs, FaUserShield, FaUserPlus, FaUsers } from "react-icons/fa";
+import { FaExchangeAlt, FaBrain, FaTags, FaClipboardList, FaFileSignature, FaBarcode, FaChartLine, FaSignOutAlt, FaUserCircle, FaTruckLoading, FaWarehouse, FaSearch, FaCubes, FaFileExport, FaChartPie, FaTh, FaBoxes, FaCogs, FaUserShield, FaUserPlus, FaUsers, FaMicrochip, FaStore } from "react-icons/fa";
 import '../css/MainLayout.css'; // Importa el CSS limpio
 
 const MainLayout = ({ children, onLogout }) => {
@@ -31,7 +32,7 @@ const MainLayout = ({ children, onLogout }) => {
     const token = localStorage.getItem("token");
     const payload = JSON.parse(atob(token.split(".")[1]));
     try {
-      const res = await fetch("http://localhost:3001/api/auth/cambiar-password", {
+      const res = await fetch(`${API_BASE}/auth/cambiar-password`, {
         method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ id_usuario: payload.id_usuario, password_actual: passData.actual, password_nueva: passData.nueva }),
       });
@@ -43,12 +44,12 @@ const MainLayout = ({ children, onLogout }) => {
 
   const appModules = [
     { id: "dashboard", name: "Dashboard", icon: <FaChartLine size="2.8em" />, color: "#875A7B", defaultPath: "/dashboard", rolesPermitidos: [1, 2], menus: [{ label: "Panel de Control", path: "/dashboard", icon: <FaChartLine /> }] },
-    { id: "recepcion", name: "Recepción", icon: <FaTruckLoading size="2.8em" />, color: "#017E84", defaultPath: "/receiving-note", rolesPermitidos: [1, 2, 4, 5, 6], menus: [{ label: "Crear Productos", path: "/create-product", icon: <FaTags /> }, { label: "Crear Lotes", path: "/create-lot", icon: <FaBarcode /> }, { label: "Nota de Ingreso", path: "/receiving-note", icon: <FaFileSignature /> }, { label: "Archivo Notas", path: "/receiving-history", icon: <FaClipboardList /> }, { label: "Ingreso Productos", path: "/receiving-products", icon: <FaCubes /> }] },
+    { id: "recepcion", name: "Recepción", icon: <FaTruckLoading size="2.8em" />, color: "#017E84", defaultPath: "/receiving-note", rolesPermitidos: [1, 2, 4, 5, 6], menus: [{ label: "Crear Productos", path: "/create-product", icon: <FaTags />, rolesPermitidos: [1, 2] }, { label: "Crear Lotes", path: "/create-lot", icon: <FaBarcode />, rolesPermitidos: [1, 2, 4] }, { label: "Nota de Ingreso", path: "/receiving-note", icon: <FaFileSignature />, rolesPermitidos: [1, 2, 4, 5, 6] }, { label: "Ingreso Productos", path: "/receiving-products", icon: <FaCubes />, rolesPermitidos: [1, 2, 4] }] },
     { id: "produccion", name: "Producción", icon: <FaBarcode size="2.8em" />, color: "#F06050", defaultPath: "/scan", rolesPermitidos: [1, 2, 4, 5, 6], menus: [{ label: "Serializado de Equipos", path: "/scan", icon: <FaBarcode /> }] },
     { id: "almacenamiento", name: "Almacenamiento", icon: <FaWarehouse size="2.8em" />, color: "#D9534F", defaultPath: "/ai-predictive", rolesPermitidos: [1, 2, 4, 5], menus: [{ label: "Inventario Anual", path: "/inventory-annual", icon: <FaClipboardList /> }, { label: "Inventario Cíclico", path: "/inventory-cyclic", icon: <FaClipboardList /> }, { label: "IA Predictiva", path: "/ai-predictive", icon: <FaBrain /> }, { label: "Auditoría IA", path: "/ai-audit", icon: <FaBrain /> }] },
     { id: "despacho", name: "Despacho", icon: <FaFileExport size="2.8em" />, color: "#F0AD4E", defaultPath: "/output", rolesPermitidos: [1, 2, 4, 5, 6], menus: [{ label: "Nota de Egreso", path: "/output", icon: <FaFileSignature /> }, { label: "Guía de Remisión", path: "/remission-guide", icon: <FaFileSignature /> }] },
     { id: "transferencia", name: "Transferencia", icon: <FaExchangeAlt size="2.8em" />, color: "#5BC0DE", defaultPath: "/transfers", rolesPermitidos: [1, 2, 4, 5], menus: [{ label: "Gestión Transferencias", path: "/transfers", icon: <FaExchangeAlt /> }] },
-    { id: "reportes", name: "Reportes", icon: <FaChartPie size="2.8em" />, color: "#5CB85C", defaultPath: "/inventory", rolesPermitidos: [1, 2], menus: [{ label: "Stock General", path: "/inventory", icon: <FaBoxes /> }, { label: "Stock Valorado", path: "/valued-stock", icon: <FaChartLine /> }, { label: "Trazabilidad", path: "/history", icon: <FaSearch /> }] },
+    { id: "reportes", name: "Reportes", icon: <FaChartPie size="2.8em" />, color: "#5CB85C", defaultPath: "/inventory", rolesPermitidos: [1, 2], menus: [{ label: "Stock General", path: "/inventory", icon: <FaBoxes /> }, { label: "Stock Valorado", path: "/valued-stock", icon: <FaChartLine /> }, { label: "Seriales en Bodega", path: "/serials-stock", icon: <FaMicrochip /> }, { label: "Seriales Enviados", path: "/serials-sent", icon: <FaStore /> }, { label: "Trazabilidad", path: "/history", icon: <FaSearch /> }, { label: "Archivo Notas", path: "/receiving-history", icon: <FaClipboardList /> }, { label: "Inv. Cíclico", path: "/inventory-cyclic-report", icon: <FaClipboardList /> }, { label: "Inv. Anual", path: "/inventory-annual-report", icon: <FaClipboardList /> }] },
     { 
       id: "sistemas", 
       name: "Sistemas", 
@@ -65,7 +66,8 @@ const MainLayout = ({ children, onLogout }) => {
 
   const modulosPermitidos = appModules.filter((app) => app.rolesPermitidos.includes(userRole));
   const isHome = location.pathname === "/home" || location.pathname === "/";
-  const activeApp = modulosPermitidos.find((app) => app.menus.some((m) => m.path === location.pathname));
+  const getMenusPermitidos = (app) => app.menus.filter((menu) => !menu.rolesPermitidos || menu.rolesPermitidos.includes(userRole));
+  const activeApp = modulosPermitidos.find((app) => getMenusPermitidos(app).some((m) => m.path === location.pathname));
 
   return (
     <div className="layout-container">
@@ -114,7 +116,7 @@ const MainLayout = ({ children, onLogout }) => {
               <h3 className="sidebar-title">{activeApp.name}</h3>
             </div>
             <nav className="sidebar-nav">
-              {activeApp.menus.map((menu) => {
+              {getMenusPermitidos(activeApp).map((menu) => {
                 const isActive = location.pathname === menu.path;
                 return (
                   <div key={menu.path} onClick={() => navigate(menu.path)} className={`nav-item ${isActive ? "active" : ""}`} style={isActive ? { borderLeftColor: activeApp.color, color: activeApp.color } : {}}>

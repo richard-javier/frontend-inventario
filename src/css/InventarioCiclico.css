@@ -41,6 +41,11 @@
     color: #1a73e8;
 }
 
+.annual-icon-wrapper {
+    background: #fce8e6;
+    color: #d9534f;
+}
+
 /* STEPPER (Barra de progreso) */
 .stepper-container {
     display: flex;
@@ -121,6 +126,71 @@
     padding: 10px;
 }
 
+.cyclic-auto-summary {
+    margin-top: 18px;
+    padding: 16px;
+    border: 1px solid #d7e3ff;
+    border-radius: 10px;
+    background: #f4f8ff;
+}
+
+.cyclic-auto-summary strong {
+    display: block;
+    color: #1a73e8;
+    font-size: 1.9rem;
+}
+
+.cyclic-auto-summary span {
+    color: #5f6368;
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 0.82rem;
+}
+
+.cyclic-date-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 4px;
+    border: 1px solid #d7e3ff;
+    border-radius: 10px;
+    background: #f4f8ff;
+}
+
+.cyclic-date-toggle button {
+    min-height: 42px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: #5f6368;
+    cursor: pointer;
+    font-weight: 900;
+}
+
+.cyclic-date-toggle button.active {
+    background: #1a73e8;
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(26,115,232,0.18);
+}
+
+.cyclic-date-note {
+    margin-top: 8px;
+    color: #5f6368;
+    font-size: 0.86rem;
+    font-weight: 700;
+}
+
+.cyclic-date-banner {
+    margin-bottom: 14px;
+    padding: 12px 15px;
+    border: 1px solid #d7e3ff;
+    border-left: 4px solid #1a73e8;
+    border-radius: 8px;
+    background: #f4f8ff;
+    color: #202124;
+    font-weight: 800;
+}
+
 /* TABLAS */
 .cyclic-table-container {
     border: 1px solid #e0e0e0;
@@ -154,9 +224,14 @@
 /* ESTILOS DE ESTADO (QISS) */
 .tag-qiss-ok { background: #e6f4ea; color: #137333; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; }
 .tag-qiss-alert { background: #fce8e6; color: #d93025; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px;}
+.tag-abc { width: 28px; height: 28px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.85rem; }
+.tag-abc-A { background: #fce8e6; color: #d93025; }
+.tag-abc-B { background: #fef7e0; color: #b06000; }
+.tag-abc-C { background: #e6f4ea; color: #137333; }
 
 .btn-primary-action {
     background: #1a73e8; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 1.1rem; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; transition: 0.3s;
 }
 .btn-primary-action:disabled { background: #dadce0; cursor: not-allowed; }
 .btn-success-action { background: #137333; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 1.1rem; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; }
+.annual-pdf-button { background: #d93025; }

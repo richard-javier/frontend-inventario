@@ -1,0 +1,278 @@
+.count-report-container {
+  min-height: 100vh;
+  background: #f4f6f8;
+  padding: 25px;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+.count-report-card {
+  background: #ffffff;
+  border: 1px solid #e0e5eb;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  padding: 25px;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.count-report-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+  border-bottom: 2px solid #f0f2f5;
+  padding-bottom: 18px;
+  margin-bottom: 20px;
+}
+
+.count-report-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #137333;
+  margin: 0 0 8px;
+  font-size: 1.6rem;
+}
+
+.count-report-header h2 span {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #e6f4ea;
+  color: #34a853;
+}
+
+.count-report-header p {
+  margin: 0;
+  color: #5f6368;
+  font-size: 0.95rem;
+}
+
+.count-report-actions,
+.count-report-filters,
+.count-report-kpis {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.count-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 11px 16px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.count-btn-excel {
+  background: #e6f4ea;
+  color: #137333;
+}
+
+.count-btn-pdf {
+  background: #fce8e6;
+  color: #d93025;
+}
+
+.count-report-kpis {
+  margin-bottom: 18px;
+}
+
+.count-report-kpis div {
+  flex: 1 1 170px;
+  border: 1px solid #e0e5eb;
+  border-radius: 8px;
+  padding: 14px;
+  background: #fbfcfe;
+}
+
+.count-report-kpis strong {
+  display: block;
+  color: #202124;
+  font-size: 1.25rem;
+}
+
+.count-report-kpis span {
+  color: #5f6368;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.count-report-filters {
+  margin-bottom: 18px;
+}
+
+.count-search {
+  flex: 1 1 360px;
+  position: relative;
+}
+
+.count-search svg {
+  position: absolute;
+  left: 14px;
+  top: 13px;
+  color: #80868b;
+}
+
+.count-search input,
+.count-report-filters select {
+  height: 42px;
+  border: 1px solid #dadce0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #202124;
+  font-weight: 700;
+  box-sizing: border-box;
+}
+
+.count-search input {
+  width: 100%;
+  padding: 0 14px 0 42px;
+}
+
+.count-report-filters select {
+  min-width: 190px;
+  padding: 0 12px;
+}
+
+.count-date-toggle {
+  display: inline-flex;
+  height: 42px;
+  padding: 3px;
+  border: 1px solid #dadce0;
+  border-radius: 8px;
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
+.count-date-toggle button {
+  min-width: 72px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #5f6368;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.count-date-toggle button.active {
+  background: #137333;
+  color: #ffffff;
+}
+
+.count-table-wrap {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.count-table {
+  width: 100%;
+  min-width: 1060px;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+
+.count-table th {
+  background: #f8f9fa;
+  color: #5f6368;
+  text-align: left;
+  padding: 14px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  border-bottom: 2px solid #dadce0;
+}
+
+.count-table td {
+  padding: 14px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #202124;
+  vertical-align: middle;
+}
+
+.count-table small {
+  display: block;
+  color: #80868b;
+  margin-top: 4px;
+  font-size: 0.75rem;
+}
+
+.count-sku {
+  color: #1a73e8;
+  font-weight: 800;
+}
+
+.blank-cell {
+  background: #ffffff;
+  min-width: 90px;
+}
+
+.abc-badge {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+}
+
+.abc-A {
+  background: #fce8e6;
+  color: #d93025;
+}
+
+.abc-B {
+  background: #fef7e0;
+  color: #b06000;
+}
+
+.abc-C {
+  background: #e6f4ea;
+  color: #137333;
+}
+
+.count-table-note {
+  color: #5f6368;
+  font-size: 0.85rem;
+  margin: 12px 0 0;
+}
+
+.count-report-loading {
+  text-align: center;
+  padding: 50px;
+  color: #5f6368;
+}
+
+@media (max-width: 900px) {
+  .count-report-container {
+    padding: 14px;
+  }
+
+  .count-report-card {
+    padding: 16px;
+  }
+
+  .count-report-header {
+    flex-direction: column;
+  }
+
+  .count-report-actions {
+    width: 100%;
+  }
+
+  .count-btn {
+    flex: 1 1 140px;
+    justify-content: center;
+  }
+}

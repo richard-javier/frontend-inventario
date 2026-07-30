@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { FaBoxOpen, FaTrash, FaEdit, FaTimes, FaSave, FaFileInvoiceDollar, FaMapMarkerAlt, FaTag, FaSearch, FaAngleLeft, FaAngleRight, FaMicrochip, FaPowerOff, FaRecycle, FaClock, FaFilePdf, FaFileExcel, FaWarehouse } from 'react-icons/fa';
+import { API_BASE } from '../config/api.js';
+import { FaBoxOpen, FaTrash, FaEdit, FaTimes, FaSave, FaFileInvoiceDollar, FaMapMarkerAlt, FaTag, FaSearch, FaAngleLeft, FaAngleRight, FaMicrochip, FaPowerOff, FaRecycle, FaClock, FaFilePdf, FaFileExcel, FaWarehouse, FaStepBackward, FaStepForward } from 'react-icons/fa';
 import { exportarInventarioPDF, exportarInventarioExcel, generarPDFReposicion } from '../utils/exportReports';
 import '../css/InventoryPage.css';
 
@@ -24,7 +25,7 @@ const InventoryPage = () => {
   const fetchInventario = async () => {
     const token = localStorage.getItem('token');
     try {
-      const response = await fetch('http://localhost:3001/api/inventario', { headers: { 'Authorization': `Bearer ${token}` } });
+      const response = await fetch(`${API_BASE}/inventario`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (response.ok) setProductos(await response.json() || []);
     } catch (error) { console.error("Error cargando inventario", error); }
     finally { setLoading(false); }
@@ -74,7 +75,7 @@ const InventoryPage = () => {
     if (Number(prod.stock_actual) > 0) return alert("⛔ No se puede descontinuar con stock físico.");
     if(!window.confirm(`¿Descontinuar:\n"${prod.nombre_producto}"?`)) return;
     const token = localStorage.getItem('token');
-    await fetch(`http://localhost:3001/api/inventario/${prod.id_producto}`, {
+    await fetch(`${API_BASE}/inventario/${prod.id_producto}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ ...prod, status_equipo: 'Descontinuado' })
     });
@@ -84,7 +85,7 @@ const InventoryPage = () => {
   const handleReactivar = async (prod) => {
     if(!window.confirm(`¿Reactivar:\n"${prod.nombre_producto}"?`)) return;
     const token = localStorage.getItem('token');
-    await fetch(`http://localhost:3001/api/inventario/${prod.id_producto}`, {
+    await fetch(`${API_BASE}/inventario/${prod.id_producto}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ ...prod, status_equipo: 'Nuevo' }) 
     });
@@ -94,7 +95,7 @@ const InventoryPage = () => {
   const handleUpdateSave = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem('token');
-    await fetch(`http://localhost:3001/api/inventario/${editingProduct.id_producto}`, {
+    await fetch(`${API_BASE}/inventario/${editingProduct.id_producto}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(editingProduct)
     });
@@ -124,6 +125,24 @@ const InventoryPage = () => {
   const indexPrimerItem = indexUltimoItem - itemsPorPagina;
   const itemsActuales = productosFiltrados.slice(indexPrimerItem, indexUltimoItem);
   const totalPaginas = Math.ceil(productosFiltrados.length / itemsPorPagina);
+  const desdeRegistro = productosFiltrados.length === 0 ? 0 : indexPrimerItem + 1;
+  const hastaRegistro = Math.min(indexUltimoItem, productosFiltrados.length);
+
+  const cambiarPagina = (pagina) => {
+    const paginaSegura = Math.min(Math.max(pagina, 1), totalPaginas || 1);
+    setPaginaActual(paginaSegura);
+  };
+
+  const getPaginasVisibles = () => {
+    if (totalPaginas <= 7) {
+      return Array.from({ length: totalPaginas }, (_, index) => index + 1);
+    }
+
+    if (paginaActual <= 4) return [1, 2, 3, 4, 5, '...', totalPaginas];
+    if (paginaActual >= totalPaginas - 3) return [1, '...', totalPaginas - 4, totalPaginas - 3, totalPaginas - 2, totalPaginas - 1, totalPaginas];
+
+    return [1, '...', paginaActual - 1, paginaActual, paginaActual + 1, '...', totalPaginas];
+  };
 
   return (
     <div className="inventory-container">
@@ -242,54 +261,157 @@ const InventoryPage = () => {
           </table>
         </div>
 
-        {totalPaginas > 1 && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px' }}>
-            <span style={{ color: '#5f6368', fontSize: '0.9rem' }}>Mostrando {indexPrimerItem + 1} a {Math.min(indexUltimoItem, productosFiltrados.length)} de {productosFiltrados.length}</span>
-            <div style={{ display: 'flex', gap: '5px' }}>
-              <button onClick={() => setPaginaActual(paginaActual - 1)} disabled={paginaActual === 1} style={{ padding: '8px 12px', cursor: paginaActual === 1 ? 'not-allowed' : 'pointer', background: 'white', border: '1px solid #ddd', borderRadius: '4px' }}><FaAngleLeft /></button>
-              <span style={{ padding: '8px', color: '#1a73e8', fontWeight: 'bold' }}>{paginaActual} / {totalPaginas}</span>
-              <button onClick={() => setPaginaActual(paginaActual + 1)} disabled={paginaActual === totalPaginas} style={{ padding: '8px 12px', cursor: paginaActual === totalPaginas ? 'not-allowed' : 'pointer', background: 'white', border: '1px solid #ddd', borderRadius: '4px' }}><FaAngleRight /></button>
-            </div>
+        <div className="pagination-bar">
+          <div className="pagination-summary">
+            <strong>{desdeRegistro}-{hastaRegistro}</strong> de {productosFiltrados.length} registros
+            <span>Pagina {paginaActual} de {Math.max(totalPaginas, 1)}</span>
           </div>
-        )}
+
+          {totalPaginas > 1 && (
+            <nav className="pagination-controls" aria-label="Navegacion de inventario">
+              <button className="pagination-btn pagination-edge" onClick={() => cambiarPagina(1)} disabled={paginaActual === 1} title="Primera pagina">
+                <FaStepBackward />
+              </button>
+              <button className="pagination-btn" onClick={() => cambiarPagina(paginaActual - 1)} disabled={paginaActual === 1} title="Pagina anterior">
+                <FaAngleLeft />
+                <span>Anterior</span>
+              </button>
+
+              <div className="pagination-pages">
+                {getPaginasVisibles().map((pagina, index) => (
+                  pagina === '...' ? (
+                    <span className="pagination-ellipsis" key={`ellipsis-${index}`}>...</span>
+                  ) : (
+                    <button
+                      className={`pagination-page ${pagina === paginaActual ? 'active' : ''}`}
+                      key={pagina}
+                      onClick={() => cambiarPagina(pagina)}
+                      aria-current={pagina === paginaActual ? 'page' : undefined}
+                    >
+                      {pagina}
+                    </button>
+                  )
+                ))}
+              </div>
+
+              <button className="pagination-btn" onClick={() => cambiarPagina(paginaActual + 1)} disabled={paginaActual === totalPaginas} title="Pagina siguiente">
+                <span>Siguiente</span>
+                <FaAngleRight />
+              </button>
+              <button className="pagination-btn pagination-edge" onClick={() => cambiarPagina(totalPaginas)} disabled={paginaActual === totalPaginas} title="Ultima pagina">
+                <FaStepForward />
+              </button>
+            </nav>
+          )}
+        </div>
 
       </div>
 
       {editingProduct && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, color: '#1a73e8' }}><FaEdit /> Límites de Stock</h3>
-              <button onClick={() => setEditingProduct(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.2rem' }}><FaTimes /></button>
+        <div className="inventory-stock-modal-overlay">
+          <div className="inventory-stock-modal" role="dialog" aria-modal="true" aria-labelledby="stock-limits-title">
+            <button
+              type="button"
+              className="inventory-stock-modal-close"
+              onClick={() => setEditingProduct(null)}
+              aria-label="Cerrar ventana de límites de stock"
+              title="Cerrar"
+            >
+              <FaTimes />
+            </button>
+
+            <div className="inventory-stock-modal-header">
+              <span className="inventory-stock-modal-icon"><FaEdit /></span>
+              <div>
+                <h3 id="stock-limits-title">Límites de Stock</h3>
+                <p>{editingProduct.nombre_producto || 'Producto seleccionado'}</p>
+              </div>
             </div>
-            <form onSubmit={handleUpdateSave}>
-                <div style={{display:'grid', gridTemplateColumns: '1fr 1fr', gap:'15px', marginBottom: '20px'}}>
-                    <div><label style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>Mínimo (Alerta):</label><input type="number" value={editingProduct.stock_minimo || ''} onChange={(e) => setEditingProduct({...editingProduct, stock_minimo: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #dadce0' }} required /></div>
-                    <div><label style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>Máximo Permitido:</label><input type="number" value={editingProduct.stock_maximo || ''} onChange={(e) => setEditingProduct({...editingProduct, stock_maximo: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #dadce0' }} required /></div>
+
+            <form onSubmit={handleUpdateSave} className="inventory-stock-modal-form">
+                <div className="inventory-stock-modal-grid">
+                    <label className="inventory-stock-field">
+                      <span>Mínimo de alerta</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={editingProduct.stock_minimo || ''}
+                        onChange={(e) => setEditingProduct({...editingProduct, stock_minimo: e.target.value})}
+                        required
+                      />
+                    </label>
+                    <label className="inventory-stock-field">
+                      <span>Máximo permitido</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={editingProduct.stock_maximo || ''}
+                        onChange={(e) => setEditingProduct({...editingProduct, stock_maximo: e.target.value})}
+                        required
+                      />
+                    </label>
                 </div>
-                <div style={{textAlign: 'right'}}><button type="submit" style={{ background: '#1a73e8', color: 'white', padding: '12px 24px', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Guardar Parámetros</button></div>
+
+                <div className="inventory-stock-modal-actions">
+                  <button type="button" className="inventory-stock-btn secondary" onClick={() => setEditingProduct(null)}>
+                    Cancelar
+                  </button>
+                  <button type="submit" className="inventory-stock-btn primary">
+                    <FaSave /> Guardar parámetros
+                  </button>
+                </div>
             </form>
           </div>
         </div>
       )}
 
       {replenishProduct && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #ea4335', paddingBottom: '10px', marginBottom: '15px' }}>
-              <h3 style={{ margin: 0, color: '#ea4335' }}><FaFileInvoiceDollar /> Orden de Reposición</h3>
-              <button onClick={() => setReplenishProduct(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.2rem' }}><FaTimes /></button>
+        <div className="inventory-replenish-modal-overlay">
+          <div className="inventory-replenish-modal" role="dialog" aria-modal="true" aria-labelledby="replenish-order-title">
+            <button
+              type="button"
+              className="inventory-replenish-modal-close"
+              onClick={() => setReplenishProduct(null)}
+              aria-label="Cerrar orden de reposición"
+              title="Cerrar"
+            >
+              <FaTimes />
+            </button>
+
+            <div className="inventory-replenish-modal-header">
+              <span className="inventory-replenish-modal-icon"><FaFileInvoiceDollar /></span>
+              <div>
+                <h3 id="replenish-order-title">Orden de Reposición</h3>
+                <p>{replenishProduct.nombre_producto}</p>
+              </div>
             </div>
-            <form onSubmit={(e) => { e.preventDefault(); generarPDFReposicion(replenishProduct, cantidadReponer); setReplenishProduct(null); }}>
-                <p style={{ fontSize: '1.1rem', fontWeight: '500' }}>{replenishProduct.nombre_producto}</p>
-                <div style={{background: '#f8f9fa', padding: '20px', borderRadius: '8px', margin: '15px 0', border: '1px solid #dadce0'}}>
-                   <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '12px'}}><span>Costo Unitario:</span> <strong>${replenishProduct.precio || '0.00'}</strong></div>
-                   <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                       <label style={{fontWeight: 'bold'}}>Cantidad a Pedir:</label>
-                       <input type="number" min="1" value={cantidadReponer} onChange={(e) => setCantidadReponer(e.target.value)} style={{ padding: '10px', width: '90px', border: '2px solid #ea4335', borderRadius: '6px', fontSize: '1.1rem', textAlign: 'center' }} required />
+
+            <form className="inventory-replenish-modal-form" onSubmit={(e) => { e.preventDefault(); generarPDFReposicion(replenishProduct, cantidadReponer); setReplenishProduct(null); }}>
+                <div className="inventory-replenish-summary">
+                   <div className="inventory-replenish-row">
+                     <span>Costo unitario</span>
+                     <strong>${replenishProduct.precio || '0.00'}</strong>
                    </div>
+                   <label className="inventory-replenish-quantity">
+                       <span>Cantidad a pedir</span>
+                       <input
+                         type="number"
+                         min="1"
+                         value={cantidadReponer}
+                         onChange={(e) => setCantidadReponer(e.target.value)}
+                         required
+                       />
+                   </label>
                 </div>
-                <button type="submit" style={{ background: '#ea4335', color: 'white', width: '100%', padding: '12px', border: 'none', borderRadius: '6px', fontSize: '1.05rem', cursor: 'pointer' }}>Generar Orden (PDF)</button>
+
+                <div className="inventory-replenish-modal-actions">
+                  <button type="button" className="inventory-replenish-btn secondary" onClick={() => setReplenishProduct(null)}>
+                    Cancelar
+                  </button>
+                  <button type="submit" className="inventory-replenish-btn primary">
+                    <FaFilePdf /> Generar orden PDF
+                  </button>
+                </div>
             </form>
           </div>
         </div>

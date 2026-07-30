@@ -1,201 +1,456 @@
-import React, { useState, useEffect } from 'react';
-import { FaExclamationTriangle, FaChartPie, FaChartBar, FaRobot, FaSpinner } from 'react-icons/fa'; 
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { API_BASE, IA_BASE } from '../config/api.js';
+import {
+    FaBell,
+    FaBrain,
+    FaChartLine,
+    FaChartBar,
+    FaChartPie,
+    FaCheckCircle,
+    FaExclamationTriangle,
+    FaFilePdf,
+    FaRobot,
+    FaShoppingCart,
+    FaSpinner,
+    FaTimes,
+    FaWarehouse
+} from 'react-icons/fa';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { generarOrdenCompraPDF } from '../utils/generadorPDF.js';
 import '../css/DashboardPage.css';
+
+const API_NODE = `${API_BASE}`;
+const API_IA = `${IA_BASE}`;
+const MES_ACTUAL = new Date().getMonth() + 1;
+const ANIO_ACTUAL = new Date().getFullYear();
 
 const DashboardPage = () => {
     const [productos, setProductos] = useState([]);
-    const [historial, setHistorial] = useState([]); 
+    const [historial, setHistorial] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [showNotifications, setShowNotifications] = useState(false);
+    const [prediccionesRF, setPrediccionesRF] = useState({});
+    const [estadoModelo, setEstadoModelo] = useState({ status: 'checking', mensaje: 'Conectando con XGBoost' });
+    const notifRef = useRef(null);
 
     useEffect(() => {
         const storedToken = localStorage.getItem('token');
-        if (storedToken) fetchDatosIniciales(storedToken); 
+        if (storedToken) fetchDatosIniciales(storedToken);
+
+        const handleClickOutside = (event) => {
+            if (notifRef.current && !notifRef.current.contains(event.target)) setShowNotifications(false);
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
     const fetchDatosIniciales = async (token) => {
         try {
             const [resProd, resHist] = await Promise.all([
-                fetch('http://localhost:3001/api/inventario', { headers: { 'Authorization': `Bearer ${token}` } }),
-                fetch('http://localhost:3001/api/inventario/historial', { headers: { 'Authorization': `Bearer ${token}` } })
+                fetch(`${API_NODE}/inventario`, { headers: { Authorization: `Bearer ${token}` } }),
+                fetch(`${API_NODE}/inventario/historial`, { headers: { Authorization: `Bearer ${token}` } })
             ]);
 
             if (resProd.ok) {
                 const dataP = await resProd.json();
                 setProductos(Array.isArray(dataP) ? dataP : []);
             }
+
             if (resHist.ok) {
                 const dataH = await resHist.json();
                 setHistorial(Array.isArray(dataH) ? dataH : []);
             }
-        } catch (error) { console.error("Error:", error); } 
-        finally { setLoading(false); }
+        } catch (error) {
+            console.error('Error al cargar dashboard:', error);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    // --- PROCESAMIENTO INTELIGENTE DE DATOS ---
-    const activosReales = productos.filter(p => p.estado !== 'INACTIVO');
-    
-    // FILTRO DE IA (Simulado para React): Solo nos preocupan los agotados que TIENEN un stock mínimo definido
-    const agotadosReales = activosReales.filter(p => Number(p.stock_actual) === 0 && Number(p.stock_minimo) > 0);
-    const criticos = activosReales.filter(p => Number(p.stock_actual) > 0 && Number(p.stock_actual) <= Number(p.stock_minimo));
-    const ok = activosReales.filter(p => Number(p.stock_actual) > Number(p.stock_minimo)); 
+    const activosReales = useMemo(
+        () => productos.filter((p) => p.estado !== 'INACTIVO'),
+        [productos]
+    );
 
-    // Cálculo del Stock Valorado
-    const valorPatrimonial = activosReales.reduce((acc, p) => acc + (Number(p.stock_actual) * Number(p.precio_ref || p.precio || 0)), 0);
-    const formatoMoneda = new Intl.NumberFormat('es-EC', { style: 'currency', currency: 'USD' }).format(valorPatrimonial);
+    const inventario = useMemo(() => {
+        const agotados = activosReales.filter((p) => Number(p.stock_actual) === 0 && Number(p.stock_minimo) > 0);
+        const criticos = activosReales.filter((p) => Number(p.stock_actual) > 0 && Number(p.stock_actual) <= Number(p.stock_minimo));
+        const bajos = activosReales.filter((p) => Number(p.stock_actual) > Number(p.stock_minimo) && Number(p.stock_actual) <= Number(p.stock_minimo) + 3);
+        const saludables = activosReales.filter((p) => Number(p.stock_actual) > Number(p.stock_minimo) + 3);
+        const alertas = [...agotados, ...criticos].sort((a, b) => Number(a.stock_actual) - Number(b.stock_actual));
 
-    // Priorizamos el TOP 5 por los productos más caros que están en riesgo (Protección de Capital)
-    const productosEnRiesgo = [...agotadosReales, ...criticos]
-        .sort((a, b) => Number(b.precio_ref || 0) - Number(a.precio_ref || 0))
-        .slice(0, 5);
-        
-    const maxScale = productosEnRiesgo.length > 0 ? Math.max(...productosEnRiesgo.map(p => Number(p.stock_maximo || 50))) : 50;
+        return { agotados, criticos, bajos, saludables, alertas };
+    }, [activosReales]);
 
-    // --- GRÁFICA DE BARRAS ---
-    const prepararDatosGrafica = () => {
-        const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-        const ultimos7Dias = Array.from({length: 7}).map((_, i) => {
-            const d = new Date(); d.setDate(d.getDate() - (6 - i));
+    const alertasKey = useMemo(
+        () => inventario.alertas.map((p) => `${p.id_producto}:${p.sku}:${p.stock_actual}`).join('|'),
+        [inventario.alertas]
+    );
+
+    useEffect(() => {
+        if (!alertasKey) {
+            setEstadoModelo({ status: 'idle', mensaje: 'Sin alertas para analizar' });
+            setPrediccionesRF({});
+            return;
+        }
+
+        let cancelado = false;
+
+        const cargarPrediccionesRF = async () => {
+            setEstadoModelo({ status: 'checking', mensaje: 'Analizando alertas con XGBoost' });
+
+            try {
+                const resSkus = await fetch(`${API_IA}/skus_entrenados`);
+                if (!resSkus.ok) throw new Error('No se pudo consultar el servicio IA');
+
+                const dataSkus = await resSkus.json();
+                const skusEntrenados = Array.isArray(dataSkus.skus) ? dataSkus.skus : [];
+                const productosEntrenados = inventario.alertas.filter((p) => skusEntrenados.includes(p.sku)).slice(0, 20);
+
+                if (productosEntrenados.length === 0) {
+                    if (!cancelado) {
+                        setPrediccionesRF({});
+                        setEstadoModelo({ status: 'warning', mensaje: 'Alertas sin SKU entrenado en XGBoost' });
+                    }
+                    return;
+                }
+
+                const resultados = await Promise.allSettled(
+                    productosEntrenados.map(async (producto) => {
+                        const precio = Number(producto.precio_ref || producto.precio || 0);
+                        const resPred = await fetch(`${API_IA}/predecir_demanda`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                codigo: producto.sku,
+                                mes: MES_ACTUAL,
+                                anio: ANIO_ACTUAL,
+                                precio,
+                                motor_ia: 'XGB'
+                            })
+                        });
+
+                        if (!resPred.ok) throw new Error(`Predicción fallida para ${producto.sku}`);
+                        const data = await resPred.json();
+                        return [producto.id_producto, data];
+                    })
+                );
+
+                const predicciones = {};
+                resultados.forEach((resultado) => {
+                    if (resultado.status === 'fulfilled') {
+                        const [idProducto, data] = resultado.value;
+                        predicciones[idProducto] = data;
+                    }
+                });
+
+                if (!cancelado) {
+                    setPrediccionesRF(predicciones);
+                    setEstadoModelo({
+                        status: Object.keys(predicciones).length > 0 ? 'online' : 'warning',
+                        mensaje: Object.keys(predicciones).length > 0
+                            ? `XGBoost activo: ${Object.keys(predicciones).length} alertas priorizadas`
+                            : 'XGBoost respondió sin predicciones utilizables'
+                    });
+                }
+            } catch (error) {
+                console.error('XGBoost no disponible:', error);
+                if (!cancelado) {
+                    setPrediccionesRF({});
+                    setEstadoModelo({ status: 'offline', mensaje: 'XGBoost sin conexión, usando reposición por stock máximo' });
+                }
+            }
+        };
+
+        cargarPrediccionesRF();
+        return () => {
+            cancelado = true;
+        };
+    }, [alertasKey, inventario.alertas]);
+
+    const dataGrafica = useMemo(() => {
+        const diasSemana = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
+        const ultimos7Dias = Array.from({ length: 7 }).map((_, i) => {
+            const d = new Date();
+            d.setDate(d.getDate() - (6 - i));
             return { fechaKey: d.toISOString().split('T')[0], name: diasSemana[d.getDay()], ingresos: 0, salidas: 0 };
         });
 
-        historial.forEach(mov => {
-            if (mov.fecha) {
-                const dia = ultimos7Dias.find(d => d.fechaKey === mov.fecha.split('T')[0]);
-                if (dia) {
-                    if (mov.tipo_movimiento === 'INGRESO') dia.ingresos += Number(mov.cantidad || 0);
-                    else dia.salidas += Number(mov.cantidad || 0);
-                }
-            }
+        historial.forEach((mov) => {
+            if (!mov.fecha) return;
+            const dia = ultimos7Dias.find((d) => d.fechaKey === mov.fecha.split('T')[0]);
+            if (!dia) return;
+
+            if (mov.tipo_movimiento === 'INGRESO') dia.ingresos += Number(mov.cantidad || 0);
+            else dia.salidas += Number(mov.cantidad || 0);
         });
+
         return ultimos7Dias;
-    };
-    const dataGrafica = prepararDatosGrafica();
+    }, [historial]);
 
-    // --- DONA DE SALUD ---
-    const totalItems = activosReales.length || 1; 
-    const porcAgotado = (agotadosReales.length / totalItems) * 100;
-    const porcCritico = (criticos.length / totalItems) * 100;
-    const donutGradient = `conic-gradient( #d93025 0% ${porcAgotado}%, #fbbc04 ${porcAgotado}% ${porcAgotado + porcCritico}%, #34a853 ${porcAgotado + porcCritico}% 100% )`;
+    const valorPatrimonial = activosReales.reduce(
+        (acc, p) => acc + (Number(p.stock_actual) * Number(p.precio_ref || p.precio || 0)),
+        0
+    );
 
-    // --- REPORTE NARRATIVO GENERADO POR IA ---
-    const generarNarrativaPredictiva = () => {
-        if (activosReales.length === 0) return "A la espera de datos para iniciar el motor predictivo.";
-        
-        const salidasRecientes = dataGrafica.reduce((sum, d) => sum + d.salidas, 0);
-        const ingresosRecientes = dataGrafica.reduce((sum, d) => sum + d.ingresos, 0);
-        const ratio = salidasRecientes > 0 ? (ingresosRecientes / salidasRecientes).toFixed(2) : 1;
+    const formatoMoneda = new Intl.NumberFormat('es-EC', { style: 'currency', currency: 'USD' }).format(valorPatrimonial);
+    const alertasConIA = inventario.alertas.filter((p) => prediccionesRF[p.id_producto]).length;
+    const totalItems = activosReales.length || 1;
+    const saludOperativa = Math.round((inventario.saludables.length / totalItems) * 100);
+    const salidasRecientes = dataGrafica.reduce((sum, d) => sum + d.salidas, 0);
+    const ingresosRecientes = dataGrafica.reduce((sum, d) => sum + d.ingresos, 0);
 
-        let reporte = `El motor predictivo Random Forest ha analizado la frecuencia histórica de ${activosReales.length} referencias en catálogo. `;
-        
-        if (agotadosReales.length > 0 || criticos.length > 0) {
-            reporte += `Actualmente existe una <span class="ai-highlight">probabilidad alta de quiebre de stock operativo</span> en ${agotadosReales.length + criticos.length} referencias de equipos tecnológicos y suministros. `;
-        } else {
-            reporte += `La rotación del inventario tecnológico se mantiene estable y la demanda está cubierta. `;
+    const calcularCantidadSugerida = (producto) => {
+        const prediccion = prediccionesRF[producto.id_producto];
+        if (prediccion?.cantidad_estimada !== undefined) {
+            return Math.max(1, Math.ceil(Number(prediccion.cantidad_estimada) * 1.15));
         }
 
-        if (ratio < 0.8 && salidasRecientes > 10) {
-            reporte += `La velocidad de despachos supera los ingresos recientes. Se sugiere emitir órdenes de compra priorizando el TOP 5 en riesgo.`;
-        } else {
-            reporte += `El capital inventariado de ${formatoMoneda} se encuentra dentro de los parámetros de seguridad.`;
-        }
-
-        return <span dangerouslySetInnerHTML={{ __html: reporte }} />;
+        const stockMaximo = Number(producto.stock_maximo || 0);
+        const stockActual = Number(producto.stock_actual || 0);
+        return Math.max(1, stockMaximo > stockActual ? stockMaximo - stockActual : Number(producto.stock_minimo || 1));
     };
 
-    if (loading) return <div style={{textAlign:'center', padding:'50px'}}><FaSpinner className="fa-spin" size="2em" color="#1a73e8"/></div>;
+    const solicitarProducto = (producto) => {
+        const cantidadSugerida = calcularCantidadSugerida(producto);
+        const demandaBase = prediccionesRF[producto.id_producto]?.cantidad_estimada ?? Math.ceil(cantidadSugerida / 1.15);
+        const evaluacion = prediccionesRF[producto.id_producto];
+        generarOrdenCompraPDF(producto, 'Actual', demandaBase, evaluacion?.motor_utilizado, evaluacion?.metricas_evaluacion);
+    };
+
+    const productosPriorizados = inventario.alertas
+        .map((producto) => ({
+            ...producto,
+            cantidadSugerida: calcularCantidadSugerida(producto),
+            demandaIA: prediccionesRF[producto.id_producto]?.cantidad_estimada,
+            maeModelo: prediccionesRF[producto.id_producto]?.metricas_evaluacion?.mae
+        }))
+        .sort((a, b) => b.cantidadSugerida - a.cantidadSugerida)
+        .slice(0, 6);
+
+    const porcAgotado = (inventario.agotados.length / totalItems) * 100;
+    const porcCritico = (inventario.criticos.length / totalItems) * 100;
+    const porcBajo = (inventario.bajos.length / totalItems) * 100;
+    const donutGradient = `conic-gradient(#d93025 0% ${porcAgotado}%, #f9ab00 ${porcAgotado}% ${porcAgotado + porcCritico}%, #fbbc04 ${porcAgotado + porcCritico}% ${porcAgotado + porcCritico + porcBajo}%, #34a853 ${porcAgotado + porcCritico + porcBajo}% 100%)`;
+
+    if (loading) {
+        return (
+            <div className="dash-loading">
+                <FaSpinner className="fa-spin" size="2em" />
+                <span>Cargando dashboard...</span>
+            </div>
+        );
+    }
 
     return (
         <div className="dash-container">
             <div className="dash-wrapper">
-                <div className="dash-header">
-                    <h1 className="dash-title"><FaChartPie color="#1a73e8"/> Dashboard Gerencial</h1>
-                    <p className="dash-subtitle">Métricas en tiempo real y análisis predictivo del almacén.</p>
-                </div>
+                <section className="dash-hero">
+                    <div className="dash-hero-copy">
+                        <span className="dash-eyebrow"><FaWarehouse /> Centro de Control SINCOT</span>
+                        <h1>Dashboard Gerencial</h1>
+                        <p>Priorización de reposición, salud del inventario y estimación de demanda con XGBoost.</p>
+                    </div>
 
-                <div className="ai-narrative-card">
-                    <div className="ai-icon-wrapper"><FaRobot size="2.5em" color="#93c5fd" /></div>
-                    <div className="ai-content">
-                        <h3>Reporte Narrativo Automático (Random Forest)</h3>
-                        <p className="ai-text">{generarNarrativaPredictiva()}</p>
-                    </div>
-                </div>
+                    <div className="dash-hero-actions" ref={notifRef}>
+                        <div className={`model-pill ${estadoModelo.status}`}>
+                            <span className="model-dot" />
+                            {estadoModelo.mensaje}
+                        </div>
 
-                <div className="metrics-grid">
-                    <div className="metric-card valorado">
-                        <h3 className="metric-title">Stock Valorado</h3>
-                        <p className="metric-value" style={{color: '#8e24aa'}}>{formatoMoneda}</p>
-                    </div>
-                    <div className="metric-card agotados">
-                        <h3 className="metric-title">Agotados Reales</h3>
-                        <p className="metric-value" style={{color: '#d93025'}}>{agotadosReales.length}</p>
-                    </div>
-                    <div className="metric-card critico">
-                        <h3 className="metric-title">Stock Crítico</h3>
-                        <p className="metric-value" style={{color: '#fbbc04'}}>{criticos.length}</p>
-                    </div>
-                    <div className="metric-card saludable">
-                        <h3 className="metric-title">Stock Saludable</h3>
-                        <p className="metric-value" style={{color: '#34a853'}}>{ok.length}</p>
-                    </div>
-                    <div className="metric-card total">
-                        <h3 className="metric-title">Catálogo Activo</h3>
-                        <p className="metric-value" style={{color: '#1a73e8'}}>{activosReales.length}</p>
-                    </div>
-                </div>
+                        <button
+                            className={`notification-btn ${inventario.alertas.length > 0 ? 'has-alerts' : ''}`}
+                            onClick={() => setShowNotifications(!showNotifications)}
+                            type="button"
+                            title="Alertas de reposicion"
+                            aria-label="Alertas de reposicion"
+                        >
+                            <FaBell />
+                            {inventario.alertas.length > 0 && <span>{inventario.alertas.length}</span>}
+                        </button>
 
-                <div className="charts-grid">
-                    <div className="chart-box">
-                        <h3 className="chart-header"><FaChartBar color="#1a73e8"/> Trazabilidad Semanal</h3>
-                        <div style={{ width: '100%', height: 300 }}>
+                        {showNotifications && (
+                            <div className="notification-panel">
+                                <div className="notification-head">
+                                    <h3><FaExclamationTriangle /> Solicitudes sugeridas</h3>
+                                    <button onClick={() => setShowNotifications(false)} type="button" title="Cerrar"><FaTimes /></button>
+                                </div>
+
+                                <div className="notification-list">
+                                    {inventario.alertas.length > 0 ? inventario.alertas.map((p) => (
+                                        <div key={p.id_producto} className="notification-item">
+                                            <div>
+                                                <strong>{p.sku}</strong>
+                                                <span>{p.nombre_producto}</span>
+                                            </div>
+                                            <div className="notification-actions">
+                                                <span className={Number(p.stock_actual) === 0 ? 'stock-badge out' : 'stock-badge critical'}>Stock {p.stock_actual}</span>
+                                                <button onClick={() => solicitarProducto(p)} type="button">
+                                                    <FaFilePdf /> Solicitar
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )) : (
+                                        <p className="empty-state">No hay productos agotados o criticos.</p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </section>
+
+                <section className="ai-command-card">
+                    <div className="ai-command-icon"><FaBrain /></div>
+                    <div>
+                        <span>XGBoost · menor RMSE en la evaluación</span>
+                        <h2>{inventario.alertas.length} productos requieren reposicion</h2>
+                        <p>
+                            El modelo prioriza agotados y críticos. {alertasConIA > 0
+                                ? `${alertasConIA} productos tienen demanda estimada por IA.`
+                                : 'Cuando el servicio Python este disponible, se calculara demanda proyectada automaticamente.'}
+                        </p>
+                    </div>
+                    <div className="ai-command-metrics">
+                        <strong>{salidasRecientes}</strong>
+                        <span>salidas 7 dias</span>
+                        <strong>{ingresosRecientes}</strong>
+                        <span>ingresos 7 dias</span>
+                    </div>
+                </section>
+
+                <section className="metrics-grid">
+                    <article className="metric-card valorado">
+                        <span>Stock valorado</span>
+                        <strong>{formatoMoneda}</strong>
+                    </article>
+                    <article className="metric-card agotados">
+                        <span>Agotados reales</span>
+                        <strong>{inventario.agotados.length}</strong>
+                    </article>
+                    <article className="metric-card critico">
+                        <span>Stock critico</span>
+                        <strong>{inventario.criticos.length}</strong>
+                    </article>
+                    <article className="metric-card saludable">
+                        <span>Salud operativa</span>
+                        <strong>{saludOperativa}%</strong>
+                    </article>
+                </section>
+
+                <section className="replenishment-card">
+                    <div className="section-head">
+                        <div>
+                            <h2><FaShoppingCart /> Solicitar reposicion prioritaria</h2>
+                            <p>Productos agotados y en estado critico listos para generar orden de compra.</p>
+                        </div>
+                        <span>{productosPriorizados.length} sugerencias visibles</span>
+                    </div>
+
+                    <div className="replenishment-table-wrap">
+                        <table className="replenishment-table">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th>Estado</th>
+                                    <th>Demanda IA</th>
+                                    <th>Sugerido</th>
+                                    <th>Accion</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {productosPriorizados.length > 0 ? productosPriorizados.map((producto) => (
+                                    <tr key={producto.id_producto}>
+                                        <td>
+                                            <strong>{producto.sku}</strong>
+                                            <span>{producto.nombre_producto}</span>
+                                        </td>
+                                        <td>
+                                            <span className={Number(producto.stock_actual) === 0 ? 'stock-badge out' : 'stock-badge critical'}>
+                                                {Number(producto.stock_actual) === 0 ? 'Agotado' : 'Critico'} · {producto.stock_actual} u.
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {producto.demandaIA !== undefined ? (
+                                                <div className="rf-value">
+                                                    <strong>{producto.demandaIA} u.</strong>
+                                                    <span>MAE: {producto.maeModelo ?? 'N/D'} u.</span>
+                                                </div>
+                                            ) : (
+                                                <span className="muted">Fallback stock max.</span>
+                                            )}
+                                        </td>
+                                        <td><strong>{producto.cantidadSugerida} u.</strong></td>
+                                        <td>
+                                            <button className="request-btn" onClick={() => solicitarProducto(producto)} type="button">
+                                                <FaFilePdf /> Generar orden
+                                            </button>
+                                        </td>
+                                    </tr>
+                                )) : (
+                                    <tr>
+                                        <td colSpan="5" className="empty-row"><FaCheckCircle /> No hay solicitudes pendientes.</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section className="charts-grid">
+                    <article className="chart-box trend-chart">
+                        <h3><FaChartBar /> Trazabilidad semanal</h3>
+                        <div className="chart-canvas">
                             <ResponsiveContainer>
                                 <BarChart data={dataGrafica}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e0e0e0" />
-                                    <XAxis dataKey="name" fontSize={12} stroke="#5f6368" axisLine={false} tickLine={false} />
-                                    <YAxis fontSize={12} stroke="#5f6368" axisLine={false} tickLine={false} />
-                                    <Tooltip cursor={{fill: '#f8f9fa'}} contentStyle={{borderRadius:'8px', border:'none', boxShadow:'0 4px 15px rgba(0,0,0,0.1)'}} />
-                                    <Legend wrapperStyle={{ paddingTop: '20px' }}/>
-                                    <Bar dataKey="ingresos" fill="#34a853" name="Ingresos (Unid)" radius={[4, 4, 0, 0]} barSize={25} />
-                                    <Bar dataKey="salidas" fill="#1a73e8" name="Despachos (Unid)" radius={[4, 4, 0, 0]} barSize={25} />
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e6e8eb" />
+                                    <XAxis dataKey="name" fontSize={12} stroke="#667085" axisLine={false} tickLine={false} />
+                                    <YAxis fontSize={12} stroke="#667085" axisLine={false} tickLine={false} />
+                                    <Tooltip cursor={{ fill: '#f5f7fa' }} contentStyle={{ borderRadius: '8px', border: '1px solid #e6e8eb' }} />
+                                    <Legend />
+                                    <Bar dataKey="ingresos" fill="#34a853" name="Ingresos" radius={[4, 4, 0, 0]} barSize={26} />
+                                    <Bar dataKey="salidas" fill="#2563eb" name="Despachos" radius={[4, 4, 0, 0]} barSize={26} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
-                    </div>
+                    </article>
 
-                    <div style={{display: 'flex', flexDirection: 'column', gap: '25px'}}>
-                        <div className="chart-box" style={{display: 'flex', flexDirection: 'column', alignItems: 'center', paddingBottom: '10px'}}>
-                            <h3 className="chart-header" style={{width:'100%'}}><FaChartPie color="#1a73e8"/> Salud del Inventario</h3>
-                            <div style={{ width: '160px', height: '160px', borderRadius: '50%', background: donutGradient, position: 'relative', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}>
-                                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '115px', height: '115px', background: 'white', borderRadius: '50%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                                    <span style={{fontSize: '1.8rem', fontWeight: '900', color: '#202124'}}>{activosReales.length}</span>
-                                    <span style={{fontSize: '0.7rem', color: '#5f6368', textTransform: 'uppercase', fontWeight: 'bold'}}>Items</span>
+                    <article className="chart-box health-card">
+                        <h3><FaChartPie /> Salud del inventario</h3>
+                        <div className="donut" style={{ background: donutGradient }}>
+                            <div>
+                                <strong>{activosReales.length}</strong>
+                                <span>items</span>
+                            </div>
+                        </div>
+                        <div className="legend-list">
+                            <span><i className="ok" /> Saludable</span>
+                            <span><i className="low" /> Bajo</span>
+                            <span><i className="critical" /> Critico</span>
+                            <span><i className="out" /> Agotado</span>
+                        </div>
+                    </article>
+
+                    <article className="chart-box risk-card">
+                        <h3><FaChartLine /> Prioridad por IA</h3>
+                        {productosPriorizados.length > 0 ? productosPriorizados.slice(0, 4).map((producto) => (
+                            <div key={producto.id_producto} className="risk-item">
+                                <div className="risk-header">
+                                    <span>{producto.sku}</span>
+                                    <strong>{producto.cantidadSugerida} u.</strong>
+                                </div>
+                                <div className="risk-bar-bg">
+                                    <div
+                                        className={Number(producto.stock_actual) === 0 ? 'risk-bar-fill out' : 'risk-bar-fill critical'}
+                                        style={{ width: `${Math.min(100, (producto.cantidadSugerida / Math.max(1, productosPriorizados[0].cantidadSugerida)) * 100)}%` }}
+                                    />
                                 </div>
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', fontSize: '0.8rem', color: '#5f6368', marginTop: '20px', width: '100%' }}>
-                                <span style={{display:'flex', alignItems:'center', gap:'5px', fontWeight: 'bold'}}><div style={{width:'12px', height:'12px', background:'#34a853', borderRadius:'3px'}}></div> OK</span>
-                                <span style={{display:'flex', alignItems:'center', gap:'5px', fontWeight: 'bold'}}><div style={{width:'12px', height:'12px', background:'#fbbc04', borderRadius:'3px'}}></div> Crítico</span>
-                                <span style={{display:'flex', alignItems:'center', gap:'5px', fontWeight: 'bold'}}><div style={{width:'12px', height:'12px', background:'#d93025', borderRadius:'3px'}}></div> Agotado</span>
-                            </div>
-                        </div>
-
-                        <div className="chart-box" style={{flex: 1}}>
-                            <h3 className="chart-header" style={{color: '#d93025'}}><FaExclamationTriangle /> Top Alertas (Prioridad x Valor)</h3>
-                            <div>
-                                {productosEnRiesgo.length > 0 ? productosEnRiesgo.map(prod => (
-                                    <div key={prod.id_producto} className="risk-item">
-                                        <div className="risk-header">
-                                            <span style={{whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:'75%'}}>{prod.sku} - {prod.nombre_producto}</span>
-                                            <span style={{color: prod.stock_actual === 0 ? '#d93025' : '#fbbc04'}}>{prod.stock_actual} U.</span>
-                                        </div>
-                                        <div className="risk-bar-bg">
-                                            <div className="risk-bar-fill" style={{width: `${(prod.stock_actual / maxScale) * 100}%`, background: prod.stock_actual === 0 ? '#d93025' : '#fbbc04'}}></div>
-                                        </div>
-                                    </div>
-                                )) : <p style={{textAlign:'center', color:'#5f6368', padding: '20px', fontSize:'0.9rem'}}>No hay alertas críticas pendientes.</p>}
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                        )) : (
+                            <p className="empty-state">Inventario estable.</p>
+                        )}
+                    </article>
+                </section>
             </div>
         </div>
     );

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE } from '../config/api.js';
 import { FaUserPlus, FaUser, FaIdCard, FaEnvelope, FaLock, FaUsers, FaUserShield, FaPhone } from 'react-icons/fa';
 import '../css/RegisterPage.css';
 
-const API_URL = 'http://localhost:3001/api/auth'; 
+const API_URL = `${API_BASE}/auth`; 
 
 const RegisterPage = () => {
     const [formData, setFormData] = useState({

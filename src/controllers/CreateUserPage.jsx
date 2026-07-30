@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE } from '../config/api.js';
 import { FaUserPlus, FaSave } from 'react-icons/fa';
 
 const CreateUserPage = () => {
@@ -12,7 +13,7 @@ const CreateUserPage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch('http://localhost:3001/api/auth/registro', {
+            const res = await fetch(`${API_BASE}/auth/registro`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
                 body: JSON.stringify(formData)
             });

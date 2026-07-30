@@ -1,8 +1,10 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable'; // <-- IMPORTACIÓN CORRECTA PARA VITE
+import { agregarLogoPDF } from './reportAssets';
 
 export const generarNotaIngresoPDF = (nota, productosRows) => {
     const doc = new jsPDF();
+    agregarLogoPDF(doc, { x: 14, y: 8, width: 28, height: 18 });
     
     // Encabezado 100% Original
     doc.setFontSize(22);

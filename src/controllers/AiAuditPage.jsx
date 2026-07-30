@@ -1,15 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { API_BASE } from '../config/api.js';
+import { useSearchParams } from 'react-router-dom';
 import { FaShieldAlt, FaCheck, FaTimes, FaSearch, FaBrain, FaExclamationTriangle, FaHistory, FaUserTie, FaSpinner, FaBoxOpen, FaMapMarkerAlt } from 'react-icons/fa';
 
 const AiAuditPage = () => {
     const [alertas, setAlertas] = useState([]);
     const [busqueda, setBusqueda] = useState('');
     const [cargando, setCargando] = useState(true);
+    const [searchParams, setSearchParams] = useSearchParams();
+    const accionDesdeCorreoProcesada = useRef(false);
 
     const cargarAlertas = async () => {
         try {
             const token = localStorage.getItem('token'); 
-            const res = await fetch('http://localhost:3001/api/inventario/auditoria-ia', {
+            const res = await fetch(`${API_BASE}/inventario/auditoria-ia`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
@@ -32,7 +36,7 @@ const AiAuditPage = () => {
         if(window.confirm(`⚠️ ADVERTENCIA: ¿Está seguro de APROBAR el despacho bloqueado #${id}? Se descontará el inventario físicamente.`)) {
             try {
                 const token = localStorage.getItem('token');
-                const res = await fetch('http://localhost:3001/api/inventario/auditoria-ia/resolver', {
+                const res = await fetch(`${API_BASE}/inventario/auditoria-ia/resolver`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({ id_auditoria: id, accion: 'APROBADO' })
@@ -52,7 +56,7 @@ const AiAuditPage = () => {
         if(window.confirm(`¿Desea RECHAZAR definitivamente el despacho #${id}? La transacción será anulada.`)) {
             try {
                 const token = localStorage.getItem('token');
-                const res = await fetch('http://localhost:3001/api/inventario/auditoria-ia/resolver', {
+                const res = await fetch(`${API_BASE}/inventario/auditoria-ia/resolver`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({ id_auditoria: id, accion: 'RECHAZADO' })
@@ -68,14 +72,44 @@ const AiAuditPage = () => {
         }
     };
 
+    useEffect(() => {
+        if (cargando || accionDesdeCorreoProcesada.current) return;
+
+        const idAuditoria = searchParams.get('auditoria');
+        const accion = searchParams.get('accion');
+        if (!idAuditoria || !accion) return;
+
+        const auditoria = alertas.find(a => String(a.id) === String(idAuditoria));
+        if (!auditoria) return;
+
+        accionDesdeCorreoProcesada.current = true;
+        setBusqueda(String(idAuditoria));
+        setSearchParams({ auditoria: idAuditoria });
+
+        if (auditoria.estado !== 'PENDIENTE') {
+            alert(`La auditoría #${idAuditoria} ya está en estado ${auditoria.estado}.`);
+            return;
+        }
+
+        if (accion === 'aprobar') {
+            handleAprobar(idAuditoria);
+        }
+
+        if (accion === 'rechazar' || accion === 'denegar') {
+            handleRechazar(idAuditoria);
+        }
+    }, [alertas, cargando, searchParams, setSearchParams]);
+
     const filtradas = alertas.filter(a => {
         if (!a) return false;
         const dest = a.destino ? a.destino.toLowerCase() : '';
         const est = a.estado ? a.estado.toLowerCase() : '';
         const usr = a.usuario ? a.usuario.toLowerCase() : '';
+        const id = a.id ? String(a.id).toLowerCase() : '';
         const busq = busqueda.toLowerCase();
-        return dest.includes(busq) || est.includes(busq) || usr.includes(busq);
+        return dest.includes(busq) || est.includes(busq) || usr.includes(busq) || id.includes(busq);
     });
+    const auditoriaEnlazada = searchParams.get('auditoria');
 
     if (cargando) return <div style={{textAlign:'center', padding:'50px'}}><FaSpinner className="fa-spin" size="2em" color="#d93025" /></div>;
 
@@ -129,7 +163,7 @@ const AiAuditPage = () => {
                                     </tr>
                                 ) : (
                                     filtradas.map(alerta => (
-                                        <tr key={alerta.id} style={{ borderBottom: '1px solid #f0f2f5', background: alerta.estado === 'PENDIENTE' ? '#fffdf7' : 'white' }}>
+                                        <tr key={alerta.id} style={{ borderBottom: '1px solid #f0f2f5', background: String(alerta.id) === String(auditoriaEnlazada) ? '#e8f0fe' : alerta.estado === 'PENDIENTE' ? '#fffdf7' : 'white' }}>
                                             <td style={{ padding: '15px 20px', verticalAlign: 'top' }}>
                                                 <div style={{ fontWeight: 'bold', color: '#202124' }}>#{alerta.id}</div>
                                                 <div style={{ fontSize: '0.85rem', color: '#5f6368' }}>{alerta.fecha}</div>

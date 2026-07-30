@@ -1,0 +1,146 @@
+/* src/css/AiPredictivePage.css */
+.ai-predictive-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 25px;
+  padding: 24px;
+  border: 1px solid #dbe4f0;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+.ai-predictive-brand {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.ai-predictive-icon {
+  width: 64px;
+  height: 64px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.ai-predictive-kicker {
+  display: inline-block;
+  margin-bottom: 5px;
+  color: #2563eb;
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.ai-predictive-brand h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 1.55rem;
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+.ai-predictive-brand p {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 0.94rem;
+}
+
+.rf-status-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 9px 14px;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  background: #f0fdf4;
+}
+
+.rf-status-dot {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #16a34a;
+  box-shadow: 0 0 0 5px rgba(22, 163, 74, 0.12);
+}
+
+.rf-status-card strong,
+.rf-status-card span {
+  display: block;
+}
+
+.rf-status-card strong {
+  color: #166534;
+  font-size: 0.86rem;
+}
+
+.rf-status-card span {
+  margin-top: 2px;
+  color: #15803d;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.rf-selector-card {
+  margin-bottom: 20px;
+  padding: 16px;
+  border: 1px solid #93c5fd;
+  border-left: 5px solid #2563eb;
+  border-radius: 8px;
+  background: #eff6ff;
+}
+
+.rf-selector-card label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #1d4ed8;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.rf-explain-box {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 11px 12px;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.rf-explain-box strong {
+  color: #1d4ed8;
+}
+
+.rf-explain-box span {
+  color: #475569;
+}
+
+@media (max-width: 720px) {
+  .ai-predictive-brand {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .rf-status-card {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .rf-explain-box {
+    grid-template-columns: 1fr;
+  }
+}

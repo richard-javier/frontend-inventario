@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE } from '../config/api.js';
 import { FaHistory, FaSearch, FaArrowDown, FaArrowUp, FaCalendarAlt, FaUserTie, FaBox, FaClipboardList, FaFilePdf, FaFileExcel, FaFilter, FaTimes, FaMapMarkerAlt } from 'react-icons/fa'; // <-- ¡Aquí está agregado FaMapMarkerAlt!
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -14,7 +15,7 @@ const HistoryPage = () => {
   const fetchHistorial = async () => {
     const token = localStorage.getItem('token');
     try {
-      const response = await fetch('http://localhost:3001/api/inventario/historial', {
+      const response = await fetch(`${API_BASE}/inventario/historial`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {

@@ -1,9 +1,25 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE, IA_BASE } from '../config/api.js';
 import { FaBrain, FaSearch, FaDollarSign, FaChartLine, FaSpinner, FaExclamationTriangle, FaRobot, FaArrowUp, FaArrowDown, FaCrosshairs, FaMicrochip, FaTags, FaFilePdf, FaCogs } from 'react-icons/fa';
 import { generarOrdenCompraPDF } from '../utils/generadorPDF.js'; 
+import '../css/AiPredictivePage.css';
+
+const MODELOS_IA = {
+    XGB: {
+        nombre: 'XGBoost',
+        detalle: 'Menor error en la evaluación: MAE 3,52; RMSE 10,86; R² -0,62.',
+    },
+    LR: {
+        nombre: 'Regresión Lineal Múltiple',
+        detalle: 'Modelo de referencia: MAE 19,70; RMSE 22,64; R² -6,03.',
+    },
+    RF: {
+        nombre: 'Random Forest Regressor',
+        detalle: 'Modelo comparativo: MAE 7,76; RMSE 36,30; R² -17,07.',
+    },
+};
 
 const AiPredictivePage = () => {
-    const [listaCompleta, setListaCompleta] = useState([]);
     const [productosIA, setProductosIA] = useState([]); 
     
     const [busqueda, setBusqueda] = useState('');
@@ -15,7 +31,7 @@ const AiPredictivePage = () => {
     const [precioManual, setPrecioManual] = useState('');
     
     // NUEVO: Estado para el selector del motor de IA
-    const [motorIa, setMotorIa] = useState('RF'); 
+    const [motorIa, setMotorIa] = useState('XGB'); 
     
     const [resultado, setResultado] = useState(null);
     const [cargando, setCargando] = useState(false);
@@ -26,13 +42,12 @@ const AiPredictivePage = () => {
             const token = localStorage.getItem('token');
             try {
                 // 1. Cargar inventario de Node.js
-                const resDB = await fetch('http://localhost:3001/api/inventario', { headers: { 'Authorization': `Bearer ${token}` } });
+                const resDB = await fetch(`${API_BASE}/inventario`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const dataDB = await resDB.json();
                 const inventarioSeguro = Array.isArray(dataDB) ? dataDB : [];
-                setListaCompleta(inventarioSeguro);
 
                 // 2. Cargar SKUs entrenados de Python (¡Asegúrate de que app_ia.py esté corriendo!)
-                const resIA = await fetch('http://localhost:5000/skus_entrenados');
+                const resIA = await fetch(`${IA_BASE}/skus_entrenados`);
                 const dataIA = await resIA.json();
                 const skusEntrenados = Array.isArray(dataIA.skus) ? dataIA.skus : [];
 
@@ -67,7 +82,7 @@ const AiPredictivePage = () => {
 
         try {
             // Se envía el parámetro motor_ia a Python
-            const res = await fetch('http://localhost:5000/predecir_demanda', {
+            const res = await fetch(`${IA_BASE}/predecir_demanda`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
@@ -90,7 +105,10 @@ const AiPredictivePage = () => {
                 setResultado({ ...data, estrategiaPrecio }); 
                 setCargando(false); 
             }, 1000);
-        } catch (error) { setCargando(false); }
+        } catch (error) {
+            console.error("Error al ejecutar predicción IA:", error);
+            setCargando(false);
+        }
     };
 
     const ejecutarSimulacion = async (e) => {
@@ -117,17 +135,21 @@ const AiPredictivePage = () => {
             <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
                 
                 {/* HEADER */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', marginBottom: '25px', background: 'white', padding: '25px', borderRadius: '16px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', gap: '15px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                        <div style={{ background: '#e8f0fe', padding: '15px', borderRadius: '12px', color: '#1a73e8' }}><FaBrain size="2.5em" /></div>
+                <div className="ai-predictive-hero">
+                    <div className="ai-predictive-brand">
+                        <div className="ai-predictive-icon"><FaBrain size="2.2em" /></div>
                         <div>
-                            <h2 style={{ margin: 0, color: '#202124', fontSize: '1.6rem' }}>SINCOT NEURAL ENGINE</h2>
-                            <p style={{ margin: 0, color: '#5f6368', fontSize: '0.9rem' }}>Modelo Predictivo Multi-Variable y Precios Dinámicos</p>
+                            <span className="ai-predictive-kicker">Predicción de inventario</span>
+                            <h2>Asistente de Reposición Inteligente</h2>
+                            <p>Estima cantidades y sugiere compras con el modelo mejor evaluado.</p>
                         </div>
                     </div>
-                    <div style={{ background: '#e6f4ea', padding: '8px 15px', borderRadius: '8px', border: '1px solid #ceead6', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ width: '10px', height: '10px', background: '#137333', borderRadius: '50%' }}></div>
-                        <span style={{ fontSize: '0.85rem', color: '#137333', fontWeight: 'bold' }}>MODELO ENTRENADO</span>
+                    <div className="rf-status-card">
+                        <div className="rf-status-dot"></div>
+                        <div>
+                            <strong>{MODELOS_IA[motorIa].nombre} activo</strong>
+                            <span>Resultado de apoyo sujeto a supervisión humana</span>
+                        </div>
                     </div>
                 </div>
 
@@ -137,11 +159,11 @@ const AiPredictivePage = () => {
                     {/* CONFIGURACIÓN */}
                     <div style={{ background: 'white', padding: '30px', borderRadius: '16px', border: '1px solid #e0e0e0', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
                         <h3 style={{ marginTop: 0, color: '#1a73e8', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '2px solid #f0f2f5', paddingBottom: '15px', fontSize: '1.2rem' }}>
-                            <FaMicrochip /> Parámetros del Oráculo
+                            <FaMicrochip /> Configurar predicción
                         </h3>
                         
                         <div style={{ position: 'relative', marginBottom: '20px' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#5f6368' }}>DICCIONARIO DE PRODUCTOS IA</label>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#5f6368' }}>PRODUCTO A ANALIZAR</label>
                             <div style={{ position: 'relative', marginTop: '8px' }}>
                                 <FaSearch style={{ position: 'absolute', left: '12px', top: '14px', color: '#80868b' }} />
                                 <input type="text" placeholder="SKU o Nombre..." value={busqueda} onChange={(e) => { setBusqueda(e.target.value); setMostrarDropdown(true); }} onFocus={() => setMostrarDropdown(true)} style={{ width: '100%', padding: '12px 12px 12px 35px', borderRadius: '8px', border: '2px solid #e8f0fe', background: '#f8f9fa', color: '#202124', boxSizing: 'border-box', outline: 'none', fontSize: '1rem' }} />
@@ -158,16 +180,20 @@ const AiPredictivePage = () => {
                         </div>
 
                         {/* NUEVO: SELECTOR MULTI-MODELO */}
-                        <div style={{ marginBottom: '20px', padding: '15px', background: '#e8f0fe', borderRadius: '8px', border: '1px solid #8ab4f8' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#1a73e8', display: 'flex', alignItems: 'center', gap: '8px' }}><FaCogs /> MOTOR DE INFERENCIA ANALÍTICA</label>
+                        <div className="rf-selector-card">
+                            <label><FaCogs /> MODELO DE IA PARA PRONÓSTICO</label>
                             <select value={motorIa} onChange={e => setMotorIa(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid #1a73e8', background: 'white', color: '#202124', marginTop: '8px', boxSizing:'border-box', fontSize: '1rem', fontWeight: 'bold' }}>
-                                <option value="RF">Random Forest Regressor (R²: 0.82)</option>
-                                <option value="XGB">XGBoost Regressor (R²: 0.23)</option>
-                                <option value="LR">Regresión Lineal Múltiple (R²: -0.02)</option>
+                                <option value="XGB">XGBoost - menor RMSE (10,86)</option>
+                                <option value="LR">Regresión Lineal - referencia (RMSE 22,64)</option>
+                                <option value="RF">Random Forest - comparación (RMSE 36,30)</option>
                             </select>
+                            <div className="rf-explain-box">
+                                <strong>{MODELOS_IA[motorIa].nombre}</strong>
+                                <span>{MODELOS_IA[motorIa].detalle}</span>
+                            </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '25px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '20px', marginBottom: '25px' }}>
                             <div>
                                 <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#5f6368' }}>PRECIO BASE ($)</label>
                                 <input type="number" step="0.01" value={precioManual} onChange={e => setPrecioManual(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #dadce0', background: 'white', color: '#202124', marginTop: '8px', boxSizing:'border-box', fontSize: '1rem' }} />
@@ -178,10 +204,17 @@ const AiPredictivePage = () => {
                                     <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option><option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option><option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
                                 </select>
                             </div>
+                            <div>
+                                <label style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#5f6368' }}>AÑO DE EVALUACIÓN</label>
+                                <select value={anio} onChange={e => setAnio(Number(e.target.value))} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #dadce0', background: 'white', color: '#202124', marginTop: '8px', boxSizing:'border-box', fontSize: '1rem' }}>
+                                    <option value="2025">2025</option>
+                                    <option value="2026">2026</option>
+                                </select>
+                            </div>
                         </div>
 
                         <button onClick={ejecutarSimulacion} disabled={!productoSelect || cargando} style={{ width: '100%', background: (!productoSelect || cargando) ? '#dadce0' : '#1a73e8', color: (!productoSelect || cargando) ? '#80868b' : 'white', padding: '15px', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '1.1rem', cursor: (!productoSelect || cargando) ? 'not-allowed' : 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
-                            {cargando ? <FaSpinner className="fa-spin" /> : <FaBrain />} {cargando ? 'PROCESANDO...' : 'SIMULAR ESCENARIO'}
+                            {cargando ? <FaSpinner className="fa-spin" /> : <FaBrain />} {cargando ? 'PROCESANDO...' : 'Calcular demanda con IA'}
                         </button>
                     </div>
 
@@ -192,8 +225,8 @@ const AiPredictivePage = () => {
                         {!resultado ? (
                             <div style={{ margin: 'auto', textAlign: 'center', zIndex: 1, padding: '40px' }}>
                                 <FaRobot size="5em" color="#dadce0" />
-                                <h3 style={{ color: '#5f6368', fontSize: '1.3rem', margin: '15px 0' }}>Esperando Parámetros</h3>
-                                <p style={{ color: '#80868b', fontSize: '1rem' }}>Seleccione un SKU y un Motor de IA para comenzar la predicción.</p>
+                                <h3 style={{ color: '#5f6368', fontSize: '1.3rem', margin: '15px 0' }}>Listo para pronosticar</h3>
+                                <p style={{ color: '#80868b', fontSize: '1rem' }}>Seleccione un producto, periodo y modelo para calcular la estimación.</p>
                             </div>
                         ) : (
                             <div style={{ padding: '30px', zIndex: 1, display: 'flex', flexWrap: 'wrap', gap: '30px', alignItems: 'center', height: '100%' }}>
@@ -208,7 +241,7 @@ const AiPredictivePage = () => {
                                     </div>
                                     
                                     <button 
-                                        onClick={() => generarOrdenCompraPDF(productoSelect, obtenerNombreMes(mes), resultado.cantidad_estimada)} 
+                                        onClick={() => generarOrdenCompraPDF(productoSelect, obtenerNombreMes(mes), resultado.cantidad_estimada, resultado.motor_utilizado, resultado.metricas_evaluacion)} 
                                         style={{ width: '100%', background: '#137333', color: 'white', border: 'none', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', boxShadow: '0 4px 10px rgba(19, 115, 51, 0.2)' }}
                                     >
                                         <FaFilePdf size="1.2em"/> Descargar Orden PDF
@@ -226,8 +259,9 @@ const AiPredictivePage = () => {
                                     
                                     <div style={{ display: 'flex', gap: '15px' }}>
                                         <div style={{ flex: 1, background: '#f8f9fa', padding: '15px', borderRadius: '12px', border: '1px solid #e0e0e0', textAlign: 'center' }}>
-                                            <span style={{ color: '#5f6368', fontSize: '0.8rem', fontWeight: 'bold' }}>Confianza del Modelo</span>
-                                            <div style={{ fontSize: '1.4rem', color: resultado.confianza > 70 ? '#137333' : '#d93025', fontWeight: 'bold' }}>{resultado.confianza}%</div>
+                                            <span style={{ color: '#5f6368', fontSize: '0.8rem', fontWeight: 'bold' }}>Error medio de evaluación (MAE)</span>
+                                            <div style={{ fontSize: '1.4rem', color: '#d93025', fontWeight: 'bold' }}>{resultado.metricas_evaluacion?.mae ?? 'N/D'} uds</div>
+                                            <div style={{ color: '#5f6368', fontSize: '0.7rem', lineHeight: '1.2' }}>RMSE {resultado.metricas_evaluacion?.rmse ?? 'N/D'} · R² {resultado.metricas_evaluacion?.r2 ?? 'N/D'}</div>
                                         </div>
                                         <div style={{ flex: 1, background: '#fce8e6', padding: '15px', borderRadius: '12px', border: '1px solid #fad2cf', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                                             <span style={{ color: '#d93025', fontSize: '0.8rem', fontWeight: 'bold' }}>Sugerencia de Compra</span>

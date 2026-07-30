@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE } from '../config/api.js';
 import { FaSearch, FaFilePdf, FaCalendarAlt, FaUser, FaBuilding, FaClipboardList } from 'react-icons/fa';
 import { generarNotaIngresoPDF } from '../utils/pdfGenerator'; 
 
@@ -10,7 +11,7 @@ const ReceivingHistory = () => {
     const fetchNotas = async () => {
         const token = localStorage.getItem('token');
         try {
-            const response = await fetch('http://localhost:3001/api/inventario/notas-ingreso', {
+            const response = await fetch(`${API_BASE}/inventario/notas-ingreso`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();
@@ -25,7 +26,7 @@ const ReceivingHistory = () => {
     const descargarPDF = async (idNota) => {
         const token = localStorage.getItem('token');
         try {
-            const response = await fetch(`http://localhost:3001/api/inventario/notas-ingreso/${idNota}`, {
+            const response = await fetch(`${API_BASE}/inventario/notas-ingreso/${idNota}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const { cabecera, productos } = await response.json();
@@ -79,7 +80,7 @@ const ReceivingHistory = () => {
     return (
         <div style={{ padding: '20px' }}>
             <div style={{ background: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-                <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#1a73e8' }}>
+                <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#137333' }}>
                     <FaClipboardList /> Archivo Histórico de Notas de Ingreso
                 </h2>
                 <p style={{ color: '#666', marginBottom: '25px' }}>Consulta y descarga de soportes administrativos de recepción.</p>

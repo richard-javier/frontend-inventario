@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE } from '../config/api.js';
 import { FaSave, FaPrint, FaPlus, FaTrash, FaFileSignature, FaBuilding, FaUserCheck } from 'react-icons/fa';
 import { generarNotaIngresoPDF } from '../utils/pdfGenerator'; 
 import '../css/ReceivingNotePage.css'; 
@@ -15,7 +16,7 @@ const ProductoFila = ({ producto, index, onFilaChange, onRemove }) => (
     <td style={{ padding: '8px' }}><input type="number" min="1" value={producto.recibida} onChange={(e) => onFilaChange(index, 'recibida', e.target.value)} className="cell-input" required /></td>
     <td style={{ padding: '8px' }}><input type="number" min="0" value={producto.pendiente} onChange={(e) => onFilaChange(index, 'pendiente', e.target.value)} className="cell-input" /></td>
     <td style={{ padding: '8px' }}>
-        <input type="text" list="catalogoProductos" value={producto.descripcion} onChange={(e) => onFilaChange(index, 'descripcion', e.target.value)} className="cell-input" style={{textAlign: 'left', border: '1px solid #1a73e8'}} placeholder="Buscar por SKU o Nombre..." required />
+        <input type="text" list="catalogoProductos" value={producto.descripcion} onChange={(e) => onFilaChange(index, 'descripcion', e.target.value)} className="cell-input" style={{textAlign: 'left', border: '1px solid #017E84'}} placeholder="Buscar por SKU o Nombre..." required />
     </td>
     <td style={{ padding: '8px' }}><input type="text" value={producto.guia} disabled className="cell-input" style={{color: '#5f6368', fontWeight: 'bold', background: 'transparent', border: 'none'}} /></td>
     <td className="no-print" style={{ padding: '8px', textAlign: 'center' }}>
@@ -52,7 +53,7 @@ const ReceivingNotePage = () => {
     const fetchCatalogo = async () => {
       const token = localStorage.getItem('token');
       try {
-        const response = await fetch('http://localhost:3001/api/inventario', { headers: { 'Authorization': `Bearer ${token}` } });
+        const response = await fetch(`${API_BASE}/inventario`, { headers: { 'Authorization': `Bearer ${token}` } });
         if (response.ok) setProductosBD(await response.json() || []);
       } catch (error) { console.error("Error cargando catálogo", error); }
     };
@@ -64,7 +65,7 @@ const ReceivingNotePage = () => {
     const fetchSecuencial = async () => {
       const token = localStorage.getItem('token');
       try {
-        const response = await fetch('http://localhost:3001/api/inventario/notas-ingreso/siguiente', { 
+        const response = await fetch(`${API_BASE}/inventario/notas-ingreso/siguiente`, { 
             headers: { 'Authorization': `Bearer ${token}` } 
         });
         if (response.ok) {
@@ -93,7 +94,7 @@ const ReceivingNotePage = () => {
     if (!nota.proveedor || productosRows.some(p => !p.descripcion)) return alert("⚠️ Complete proveedor y descripción.");
 
     try {
-        const response = await fetch('http://localhost:3001/api/inventario/notas-ingreso', {
+        const response = await fetch(`${API_BASE}/inventario/notas-ingreso`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ nota, productos: productosRows })
@@ -133,8 +134,8 @@ const ReceivingNotePage = () => {
       
       <div id="sincot-logo-wrapper" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ background: '#1a73e8', color: 'white', padding: '10px', borderRadius: '8px' }}><FaFileSignature size="1.5em" /></div>
-            <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#1a73e8' }}>Registro Soporte (Recepción)</h2>
+            <div style={{ background: '#017E84', color: 'white', padding: '10px', borderRadius: '8px' }}><FaFileSignature size="1.5em" /></div>
+            <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#017E84' }}>Nota de ingreso</h2>
           </div>
           <div className="no-print" style={{ display: 'flex', gap: '15px' }}>
             <button onClick={handleSave} className="btn-secondary"><FaSave /> Guardar Documento</button>
@@ -144,7 +145,7 @@ const ReceivingNotePage = () => {
 
       <div className="form-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #eaeaea', paddingBottom: '15px', marginBottom: '25px' }}>
-          <h2 style={{ color: '#202124', margin: 0, fontWeight: '700' }}>RECEPCIÓN - INGRESO A BODEGA</h2>
+          <h2 style={{ color: '#202124', margin: 0, fontWeight: '700' }}>Nota de ingreso</h2>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
             <div style={{ background: '#fce8e6', color: '#ea4335', padding: '8px 15px', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.9rem' }}>
               No. <input type="text" value={nota.secuencial} disabled style={{ border: 'none', background: 'transparent', color: '#ea4335', fontWeight: 'bold', width: '80px', outline: 'none' }} />
@@ -159,7 +160,7 @@ const ReceivingNotePage = () => {
               <div><label className="form-label">Proveedor *</label><input list="proveedoresList" value={nota.proveedor} onChange={(e) => setNota({...nota, proveedor: e.target.value})} className="form-input" required /></div>
               <div><label className="form-label">Orden Compra</label><input type="text" value={nota.ordenCompra} onChange={(e) => setNota({...nota, ordenCompra: e.target.value})} className="form-input" /></div>
               <div><label className="form-label">Fecha</label><input type="date" value={nota.fecha} className="form-input" disabled /></div>
-              <div><label className="form-label">Hora (Sincronizada)</label><input type="time" value={nota.hora} className="form-input" style={{background:'#e8f0fe', color: '#1a73e8', fontWeight: 'bold'}} disabled /></div>
+              <div><label className="form-label">Hora (Sincronizada)</label><input type="time" value={nota.hora} className="form-input" style={{background:'#e0f7f8', color: '#017E84', fontWeight: 'bold'}} disabled /></div>
               <div><label className="form-label">Proviene de *</label><select value={nota.provieneDe} onChange={(e) => setNota({...nota, provieneDe: e.target.value})} className="form-input" required > {bodegasExample.map(b => <option key={b} value={b}>{b}</option>)} </select></div>
               <div><label className="form-label">Placa Vehículo *</label><input type="text" value={nota.placaVehiculo} onChange={(e) => setNota({...nota, placaVehiculo: e.target.value})} className="form-input" required /></div>
             </div>

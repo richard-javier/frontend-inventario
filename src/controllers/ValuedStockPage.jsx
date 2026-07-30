@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { FaChartLine, FaSearch, FaFilePdf, FaFileExcel, FaClock, FaDollarSign, FaBoxes, FaSpinner, FaAngleLeft, FaAngleRight } from 'react-icons/fa';
+import { API_BASE } from '../config/api.js';
+import { FaChartLine, FaSearch, FaFilePdf, FaFileExcel, FaClock, FaDollarSign, FaBoxes, FaSpinner, FaAngleLeft, FaAngleRight, FaStepBackward, FaStepForward } from 'react-icons/fa';
 import { exportarStockValoradoPDF, exportarStockValoradoExcel } from '../utils/exportReports';
+import '../css/ValuedStockPage.css';
 
 const ValuedStockPage = () => {
   const [productos, setProductos] = useState([]); 
@@ -21,7 +23,7 @@ const ValuedStockPage = () => {
   const fetchInventario = async () => {
     const token = localStorage.getItem('token');
     try {
-      const response = await fetch('http://localhost:3001/api/inventario', { headers: { 'Authorization': `Bearer ${token}` } });
+      const response = await fetch(`${API_BASE}/inventario`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (response.ok) {
           const data = await response.json();
           // AQUÍ GARANTIZAMOS QUE SOLO VENGAN LOS QUE TIENEN CANTIDAD > 0
@@ -50,6 +52,24 @@ const ValuedStockPage = () => {
   const indexPrimerItem = indexUltimoItem - itemsPorPagina;
   const itemsActuales = productosFiltrados.slice(indexPrimerItem, indexUltimoItem); // Solo los 15 de esta página
   const totalPaginas = Math.ceil(productosFiltrados.length / itemsPorPagina);
+  const desdeRegistro = productosFiltrados.length === 0 ? 0 : indexPrimerItem + 1;
+  const hastaRegistro = Math.min(indexUltimoItem, productosFiltrados.length);
+
+  const cambiarPagina = (pagina) => {
+    const paginaSegura = Math.min(Math.max(pagina, 1), totalPaginas || 1);
+    setPaginaActual(paginaSegura);
+  };
+
+  const getPaginasVisibles = () => {
+    if (totalPaginas <= 7) {
+      return Array.from({ length: totalPaginas }, (_, index) => index + 1);
+    }
+
+    if (paginaActual <= 4) return [1, 2, 3, 4, 5, '...', totalPaginas];
+    if (paginaActual >= totalPaginas - 3) return [1, '...', totalPaginas - 4, totalPaginas - 3, totalPaginas - 2, totalPaginas - 1, totalPaginas];
+
+    return [1, '...', paginaActual - 1, paginaActual, paginaActual + 1, '...', totalPaginas];
+  };
 
   // Cálculos Financieros Rápidos (Se calculan sobre todos los filtrados, no solo los de la página actual)
   const totalInversion = productosFiltrados.reduce((sum, p) => sum + (Number(p.stock_actual) * Number(p.precio || 0)), 0);
@@ -58,7 +78,7 @@ const ValuedStockPage = () => {
   if (loading) return <div style={{textAlign:'center', padding:'50px'}}><FaSpinner className="fa-spin" size="2em" color="#34a853" /><p>Calculando valoraciones...</p></div>;
 
   return (
-    <div style={{ padding: '25px', background: '#f4f6f8', minHeight: '100vh', fontFamily: 'system-ui, sans-serif' }}>
+    <div className="valued-stock-container" style={{ padding: '25px', background: '#f4f6f8', minHeight: '100vh', fontFamily: 'system-ui, sans-serif' }}>
       
       {/* TARJETAS FINANCIERAS (Dashboard Rápido) */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '25px' }}>
@@ -87,7 +107,7 @@ const ValuedStockPage = () => {
           </div>
       </div>
 
-      <div style={{ background: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: '1px solid #e0e0e0' }}>
+      <div className="valued-stock-card" style={{ background: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: '1px solid #e0e0e0' }}>
         
         {/* ENCABEZADO Y RELOJ */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #f0f2f5', paddingBottom: '20px', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
@@ -125,7 +145,7 @@ const ValuedStockPage = () => {
         </div>
 
         {/* TABLA VALORADA PAGINADA */}
-        <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid #e0e0e0' }}>
+        <div className="valued-stock-table-wrap" style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid #e0e0e0' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px', backgroundColor: 'white' }}>
             <thead>
               <tr style={{ background: '#f8f9fa', color: '#5f6368', textAlign: 'left', fontSize: '0.85rem', textTransform: 'uppercase' }}>
@@ -172,34 +192,49 @@ const ValuedStockPage = () => {
         </div>
 
         {/* CONTROLES DE PAGINACIÓN */}
-        {totalPaginas > 1 && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', padding: '10px 0' }}>
-            <span style={{ color: '#5f6368', fontSize: '0.9rem' }}>
-              Mostrando {indexPrimerItem + 1} a {Math.min(indexUltimoItem, productosFiltrados.length)} de {productosFiltrados.length} modelos valorados
-            </span>
-            <div style={{ display: 'flex', gap: '5px' }}>
-              <button 
-                onClick={() => setPaginaActual(paginaActual - 1)} 
-                disabled={paginaActual === 1} 
-                style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #dadce0', background: paginaActual === 1 ? '#f8f9fa' : 'white', cursor: paginaActual === 1 ? 'not-allowed' : 'pointer', color: '#5f6368' }}
-              >
-                <FaAngleLeft />
-              </button>
-              
-              <span style={{ padding: '8px', color: '#34a853', fontWeight: 'bold', fontSize: '1rem' }}>
-                {paginaActual} / {totalPaginas}
-              </span>
+        <div className="valued-pagination-bar">
+          <div className="valued-pagination-summary">
+            <strong>{desdeRegistro}-{hastaRegistro}</strong> de {productosFiltrados.length} modelos valorados
+            <span>Página {paginaActual} de {Math.max(totalPaginas, 1)}</span>
+          </div>
 
-              <button 
-                onClick={() => setPaginaActual(paginaActual + 1)} 
-                disabled={paginaActual === totalPaginas} 
-                style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #dadce0', background: paginaActual === totalPaginas ? '#f8f9fa' : 'white', cursor: paginaActual === totalPaginas ? 'not-allowed' : 'pointer', color: '#5f6368' }}
-              >
+          {totalPaginas > 1 && (
+            <nav className="valued-pagination-controls" aria-label="Navegación de stock valorado">
+              <button className="valued-pagination-btn valued-pagination-edge" onClick={() => cambiarPagina(1)} disabled={paginaActual === 1} title="Primera página">
+                <FaStepBackward />
+              </button>
+              <button className="valued-pagination-btn" onClick={() => cambiarPagina(paginaActual - 1)} disabled={paginaActual === 1} title="Página anterior">
+                <FaAngleLeft />
+                <span>Anterior</span>
+              </button>
+
+              <div className="valued-pagination-pages">
+                {getPaginasVisibles().map((pagina, index) => (
+                  pagina === '...' ? (
+                    <span className="valued-pagination-ellipsis" key={`ellipsis-${index}`}>...</span>
+                  ) : (
+                    <button
+                      className={`valued-pagination-page ${pagina === paginaActual ? 'active' : ''}`}
+                      key={pagina}
+                      onClick={() => cambiarPagina(pagina)}
+                      aria-current={pagina === paginaActual ? 'page' : undefined}
+                    >
+                      {pagina}
+                    </button>
+                  )
+                ))}
+              </div>
+
+              <button className="valued-pagination-btn" onClick={() => cambiarPagina(paginaActual + 1)} disabled={paginaActual === totalPaginas} title="Página siguiente">
+                <span>Siguiente</span>
                 <FaAngleRight />
               </button>
-            </div>
-          </div>
-        )}
+              <button className="valued-pagination-btn valued-pagination-edge" onClick={() => cambiarPagina(totalPaginas)} disabled={paginaActual === totalPaginas} title="Última página">
+                <FaStepForward />
+              </button>
+            </nav>
+          )}
+        </div>
 
       </div>
     </div>

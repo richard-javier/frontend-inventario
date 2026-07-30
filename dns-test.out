@@ -1,0 +1,6 @@
+DNS SINCOT activo en 0.0.0.0:5300
+SINCOT -> 192.168.0.120
+sincot.local -> 192.168.0.120
+Consultas externas -> 8.8.8.8
+Consulta sincot tipo 1 desde 127.0.0.1:65148
+Respuesta local enviada a 127.0.0.1:65148

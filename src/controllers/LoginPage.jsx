@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { FaBoxOpen, FaEnvelope, FaLock, FaSignInAlt, FaUserPlus, FaShieldAlt } from 'react-icons/fa'; 
+import { API_BASE } from '../config/api.js';
+import { Link, useLocation } from 'react-router-dom';
+import { FaBoxOpen, FaEnvelope, FaEye, FaEyeSlash, FaLock, FaSignInAlt, FaShieldAlt, FaWarehouse } from 'react-icons/fa'; 
 import '../css/LoginPage.css'; 
 
-const API_URL = 'http://localhost:3001/api/auth'; 
+const API_URL = `${API_BASE}/auth`; 
 
 const LoginPage = ({ onLoginSuccess }) => {
     const [credentials, setCredentials] = useState({
@@ -12,7 +13,14 @@ const LoginPage = ({ onLoginSuccess }) => {
     });
     const [error, setError] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
-    const navigate = useNavigate();
+    const [showPassword, setShowPassword] = useState(false);
+    const location = useLocation();
+
+    const getRedirectDestino = () => {
+        const redirect = new URLSearchParams(location.search).get('redirect');
+        if (!redirect || !redirect.startsWith('/') || redirect.startsWith('//')) return '/home';
+        return redirect;
+    };
 
     const handleChange = (e) => {
         setCredentials({
@@ -45,11 +53,14 @@ const LoginPage = ({ onLoginSuccess }) => {
             // 2. ¡EL CAMBIO CLAVE! Llamamos a la función que nos pasó App.jsx
             // Esto actualiza el estado global a "Autenticado" y App.jsx nos redirigirá automáticamente.
             if (onLoginSuccess) {
-                onLoginSuccess(data.token);
+                const loginValido = onLoginSuccess(data.token);
+                if (loginValido) {
+                    window.location.replace(getRedirectDestino());
+                }
             } else {
                 // Por si acaso estás probando el componente aislado
                 localStorage.setItem('token', data.token);
-                navigate('/dashboard');
+                window.location.replace(getRedirectDestino());
             }
 
         } catch (err) {
@@ -76,6 +87,9 @@ const LoginPage = ({ onLoginSuccess }) => {
                         <div className="feature-item">
                             <FaShieldAlt className="feature-icon"/> Conexión Segura
                         </div>
+                        <div className="feature-item">
+                            <FaWarehouse className="feature-icon"/> Control WMS
+                        </div>
                     </div>
                 </div>
             </div>
@@ -85,12 +99,13 @@ const LoginPage = ({ onLoginSuccess }) => {
                 <div className="form-container">
                     
                     <div className="form-header">
+                        <span className="login-kicker">SINCOT WMS</span>
                         <h2>Acceso a Cuenta</h2>
                         <p>Ingrese sus credenciales corporativas</p>
                     </div>
 
                     {error && (
-                        <div className="error-alert">
+                        <div className="error-alert" role="alert" aria-live="assertive">
                             <span>⚠️ {error}</span>
                         </div>
                     )}
@@ -116,11 +131,11 @@ const LoginPage = ({ onLoginSuccess }) => {
 
                         <div className="input-group">
                             <label htmlFor="contrasena">Contraseña</label>
-                            <div className="input-wrapper">
+                            <div className="input-wrapper password-input">
                                 <FaLock className="input-icon" />
                                 <input
                                     id="contrasena"
-                                    type="password"
+                                    type={showPassword ? 'text' : 'password'}
                                     name="contrasena"
                                     placeholder="••••••••"
                                     value={credentials.contrasena}
@@ -128,7 +143,23 @@ const LoginPage = ({ onLoginSuccess }) => {
                                     required
                                     autoComplete="current-password"
                                 />
+                                <button
+                                    type="button"
+                                    className="password-toggle"
+                                    onClick={() => setShowPassword((visible) => !visible)}
+                                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                                    aria-pressed={showPassword}
+                                    title={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                                >
+                                    {showPassword ? <FaEyeSlash /> : <FaEye />}
+                                </button>
                             </div>
+                        </div>
+
+                        <div className="form-actions compact">
+                            <Link to="/forgot-password" className="form-link">
+                                ¿Olvidaste tu contraseña?
+                            </Link>
                         </div>
                         
                         <button 
@@ -141,11 +172,9 @@ const LoginPage = ({ onLoginSuccess }) => {
                         
                     </form>
 
-                    <div className="login-footer">
-                        <p>¿No tiene credenciales de acceso?</p>
-                        <button onClick={() => navigate('/registro')} className="btn-register-link">
-                            <FaUserPlus /> Solicitar cuenta a TI
-                        </button>
+                    <div className="security-note">
+                        <FaShieldAlt />
+                        <span>Sesión protegida para usuarios autorizados</span>
                     </div>
 
                 </div>

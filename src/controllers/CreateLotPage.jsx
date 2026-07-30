@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE } from '../config/api.js';
 import { FaBoxes, FaPallet, FaSearch, FaBarcode, FaPrint, FaSave, FaListAlt, FaCopy, FaCheck } from 'react-icons/fa';
 import jsPDF from 'jspdf';
 
@@ -19,7 +20,7 @@ const CreateLotPage = () => {
   const cargarHistorial = async () => {
     const token = localStorage.getItem('token');
     try {
-        const res = await fetch('http://localhost:3001/api/inventario/lotes', { headers: { 'Authorization': `Bearer ${token}` } });
+        const res = await fetch(`${API_BASE}/inventario/lotes`, { headers: { 'Authorization': `Bearer ${token}` } });
         if (res.ok) {
             const data = await res.json();
             setHistorialLotes(Array.isArray(data) ? data : []);
@@ -33,7 +34,7 @@ const CreateLotPage = () => {
     e.preventDefault();
     const token = localStorage.getItem('token');
     try {
-      const res = await fetch('http://localhost:3001/api/inventario', { headers: { 'Authorization': `Bearer ${token}` } });
+      const res = await fetch(`${API_BASE}/inventario`, { headers: { 'Authorization': `Bearer ${token}` } });
       const data = await res.json();
       const encontrado = data.find(p => p.sku === terminoBusqueda.toUpperCase() || p.codigo_barras === terminoBusqueda);
       if (encontrado) {
@@ -74,7 +75,7 @@ const CreateLotPage = () => {
     const token = localStorage.getItem('token');
     
     try {
-      const response = await fetch('http://localhost:3001/api/inventario/lotes', {
+      const response = await fetch(`${API_BASE}/inventario/lotes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
